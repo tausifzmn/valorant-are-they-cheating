@@ -5,60 +5,90 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Are They Cheating? 🕵️ — Valorant Vibe Check</title>
 <style>
-  :root {
-    --bg:#0e1015; --panel:#181b23; --panel2:#20242e; --line:#2a2f3a;
-    --txt:#e8eaed; --muted:#8b93a1; --red:#ff4655; --teal:#19e7c9; --gold:#f5c518; --good:#3ddc84;
+  :root{
+    --bg:#0b0d12; --bg2:#0f1218; --panel:#141821; --panel2:#1b212c; --line:#262d3a;
+    --txt:#e9edf3; --muted:#8b94a6; --faint:#5a6376;
+    --red:#ff4655; --red-d:#c0303d; --teal:#23e0c4; --gold:#f5c518; --blue:#5b8cff; --good:#3ddc84;
+    --radius:14px; --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+    --font:'Inter',"Segoe UI",system-ui,-apple-system,sans-serif;
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#1b1f2b 0%,var(--bg) 60%);color:var(--txt);min-height:100vh;padding:28px 16px 60px}
-  .wrap{max-width:980px;margin:0 auto}
-  header{text-align:center;margin-bottom:8px}
-  h1{font-size:clamp(28px,5vw,46px);margin:0;letter-spacing:-.5px;background:linear-gradient(90deg,var(--red),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .tag{color:var(--muted);margin:6px 0 0;font-size:14px}
-  .disclaimer{margin:14px auto 22px;max-width:680px;text-align:center;font-size:12.5px;color:var(--muted);border:1px solid var(--line);background:#15171e;border-radius:10px;padding:10px 14px}
+  html,body{margin:0}
+  body{font-family:var(--font);background:
+      radial-gradient(900px 500px at 50% -12%, #1a1f2b 0%, transparent 60%),
+      var(--bg);
+    color:var(--txt);min-height:100vh;padding:32px 18px 64px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto}
+  header{text-align:center;margin-bottom:6px}
+  h1{font-size:clamp(26px,5vw,40px);margin:0;font-weight:800;letter-spacing:-.02em;
+    background:linear-gradient(92deg,#fff 10%,var(--red) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tag{color:var(--muted);margin:7px 0 0;font-size:13.5px}
+  .disclaimer{max-width:660px;margin:16px auto 22px;text-align:center;font-size:12px;color:var(--faint);
+    border:1px solid var(--line);background:var(--bg2);border-radius:10px;padding:10px 14px}
   .disclaimer b{color:var(--red)}
-  .search{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
-  .search input{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:11px 12px;font:inherit}
-  .search input.name{width:min(220px,42vw)} .search input.tag{width:90px} .search select{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:11px}
-  button{cursor:pointer;border:none;border-radius:10px;padding:11px 18px;font:inherit;font-weight:600;transition:transform .06s,filter .15s}
+
+  .search{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+  .search input,.search select{background:var(--panel);border:1px solid var(--line);color:var(--txt);
+    border-radius:9px;padding:11px 13px;font:inherit;font-size:14px;transition:border-color .15s}
+  .search input:focus,.search select:focus{outline:none;border-color:var(--red)}
+  .search input.name{width:min(200px,40vw)} .search input.tag{width:86px;text-transform:uppercase}
+  button{cursor:pointer;border:none;border-radius:9px;padding:11px 18px;font:inherit;font-weight:600;transition:transform .06s,filter .15s,background .15s}
   button:active{transform:translateY(1px)}
   .primary{background:var(--red);color:#fff} .primary:hover{filter:brightness(1.08)}
   .ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)} .ghost:hover{border-color:var(--red)}
-  .row{display:flex;gap:10px;justify-content:center;margin-bottom:8px}
-  .err{color:var(--red);text-align:center;min-height:18px;margin:6px 0;font-size:13px}
-  .hint{color:var(--muted);text-align:center;font-size:12px;margin-bottom:18px}
-  .step{font-size:13px;color:var(--muted);text-align:center;margin:10px 0}
+  .row{display:flex;gap:10px;justify-content:center;margin:10px 0 6px}
+  .hint{color:var(--faint);text-align:center;font-size:12px;margin-bottom:14px}
+  .err{color:var(--red);text-align:center;min-height:18px;margin:4px 0;font-size:13px}
+  .step{font-size:13px;color:var(--muted);text-align:center;margin:8px 0}
 
   /* match history */
-  .history{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
-  .match{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:border-color .15s,transform .08s}
-  .match:hover{border-color:var(--red);transform:translateY(-2px)}
+  .history{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin:8px 0}
+  .match{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;
+    transition:border-color .15s,transform .08s,background .15s}
+  .match:hover{border-color:var(--red);transform:translateY(-2px);background:var(--panel2)}
   .match .map{font-weight:700;font-size:15px}
-  .match .mode{color:var(--muted);font-size:12px;text-transform:uppercase}
-  .match .date{color:var(--muted);font-size:11px;margin-top:6px}
-  .match .go{color:var(--red);font-size:12px;margin-top:4px;font-weight:700}
+  .match .mode{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  .match .date{color:var(--faint);font-size:11px;margin-top:8px}
+  .match .go{color:var(--red);font-size:11px;margin-top:6px;font-weight:700}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;position:relative;overflow:hidden}
-  .card.kick{border-color:var(--red)} .card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.06;background:var(--accent,var(--red))}
-  .card .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .name{font-weight:700;font-size:17px} .name .tag{color:var(--muted);font-weight:400;font-size:12px}
-  .enemy{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:2px 6px;border-radius:6px}
-  .agent{color:var(--muted);font-size:12px;margin:2px 0 12px}
-  .headline{font-weight:800;font-size:14px;letter-spacing:.5px;margin-bottom:12px}
-  .meter{margin-bottom:10px} .meter .lab{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
-  .lab .k{color:var(--muted)} .lab .v{font-weight:700}
-  .bar{height:9px;background:var(--panel2);border-radius:6px;overflow:hidden}
-  .bar>i{display:block;height:100%;border-radius:6px;transition:width .5s}
+  /* results layout */
+  .back{display:flex;justify-content:center;margin:6px 0 14px}
+  .summary{text-align:center;margin:6px 0 18px;color:var(--muted);font-size:13.5px} .summary b{color:var(--red)}
+  .team{margin:0 0 22px}
+  .team-head{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .team-dot{width:9px;height:9px;border-radius:50%}
+  .team-name{font-weight:700;font-size:14px;letter-spacing:.02em}
+  .team-sub{color:var(--faint);font-size:12px;margin-left:auto}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px 15px 13px;
+    position:relative;overflow:hidden;box-shadow:var(--shadow);transition:border-color .15s}
+  .card.kick{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--faint));opacity:.9}
+  .c-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .c-name{font-weight:700;font-size:15.5px;line-height:1.1}
+  .c-name .ctag{color:var(--faint);font-weight:500;font-size:11.5px;margin-left:3px}
+  .c-head{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent,var(--muted))}
+  .c-agent{color:var(--muted);font-size:12px;margin:3px 0 11px}
+  .c-line{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:11px}
+  .c-line b{color:var(--txt);font-weight:600}
+  .c-line .hs{color:var(--gold)}
+
+  .meter{margin-bottom:8px}
+  .meter .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-bottom:4px}
+  .meter .lab b{color:var(--txt);font-weight:700}
+  .bar{height:6px;background:var(--panel2);border-radius:5px;overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:5px;transition:width .5s}
   .bar.cheat>i{background:linear-gradient(90deg,var(--gold),var(--red))}
-  .bar.throw>i{background:linear-gradient(90deg,#5b6cff,var(--teal))}
-  .reasons{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
-  .reasons ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--muted)} .reasons li{margin-bottom:3px}
-  .verdict{font-size:12px;margin-top:8px;color:var(--txt);font-style:italic}
-  .back{margin:10px 0;display:flex;justify-content:center}
-  .summary{text-align:center;margin:18px 0 6px;color:var(--muted);font-size:14px} .summary b{color:var(--red)}
-  footer{text-align:center;margin-top:34px;color:var(--muted);font-size:12px}
-  code{background:#11141a;padding:1px 5px;border-radius:4px;color:var(--teal)}
+  .bar.throw>i{background:linear-gradient(90deg,#3a5bd0,var(--teal))}
+
+  .verdict{font-size:12px;margin-top:10px;color:var(--txt);font-style:italic;line-height:1.35}
+  .reasons{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+  .reasons summary{font-size:11px;color:var(--faint);cursor:pointer;user-select:none}
+  .reasons summary:hover{color:var(--muted)}
+  .reasons ul{margin:7px 0 0;padding-left:15px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  footer{text-align:center;margin-top:34px;color:var(--faint);font-size:11.5px}
+  code{background:var(--bg2);padding:1px 5px;border-radius:4px;color:var(--teal)}
   .hidden{display:none}
 </style>
 </head>
@@ -66,13 +96,12 @@
 <div class="wrap">
   <header>
     <h1>Are They Cheating? 🕵️</h1>
-    <p class="tag">search a Riot ID → pick a match → vibe-check everyone in it &nbsp;·&nbsp; 100% scientific* &nbsp;*not scientific at all</p>
+    <p class="tag">search a Riot ID → pick a match → vibe-check the whole lobby</p>
   </header>
 
   <div class="disclaimer">
-    <b>For entertainment only.</b> This app cannot and does not detect real cheating — it runs a
-    goofy joke heuristic on publicly visible match stats from Riot's API. Do not accuse real people
-    of cheating based on it. It's satire, not a report. No data is stored.
+    <b>For entertainment only.</b> This app cannot and does not detect real cheating — it runs a goofy
+    joke heuristic on publicly visible match stats. Do not accuse real people of cheating based on it.
   </div>
 
   <div class="search">
@@ -86,145 +115,147 @@
     <button class="primary" id="searchBtn">🔍 Search</button>
   </div>
   <div class="row">
-    <button class="ghost" id="demoBtn">🎲 Try a sample match (no key needed)</button>
+    <button class="ghost" id="demoBtn">🎲 Sample match (no key)</button>
   </div>
-  <div class="err" id="err"></div>
-  <div class="hint">e.g. <code>TenZ#NA1</code> — type the name and tag separately. Find your tag in Valorant (it's the 3–5 chars after #).</div>
+  <div class="hint">e.g. <code>TenZ#NA1</code> — name and tag are separate fields.</div>
 
-  <div id="step" class="step"></div>
-  <div class="back hidden" id="backRow"><button class="ghost" id="backBtn">← Back to match history</button></div>
+  <div class="err" id="err"></div>
+  <div class="step" id="step"></div>
+  <div class="back hidden" id="backRow"><button class="ghost" id="backBtn">← Match history</button></div>
   <div class="history hidden" id="history"></div>
   <div class="summary hidden" id="summary"></div>
-  <div class="grid" id="grid"></div>
+  <div id="teams"></div>
 
-  <footer>
-    Built for post-game salt. Data via the HenrikDev Valorant API. Runs on a tiny backend so your API key stays secret. 🔒
-  </footer>
+  <footer>Built for post-game salt · Data via the HenrikDev Valorant API · key stays server-side 🔒</footer>
 </div>
 
 <script src="/analysis.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
-  const grid=$('grid'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backRow=$('backRow');
-  const ACCENTS={CHEATER:'#ff4655',THROWER:'#5b6cff',SUS:'#f5c518',FINE:'#3ddc84'};
+  const teamsEl=$('teams'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backRow=$('backRow');
+  const ACCENTS={CHEATER:'#ff4655',THROWER:'#23e0c4',SUS:'#f5c518',FINE:'#3ddc84'};
   let currentName=null, currentTag=null, currentRegion='na';
 
-  function setErr(m){ errEl.textContent = m || ''; }
-  function show(el,on){ el.classList.toggle('hidden', !on); }
-
-  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function fmtDate(ms){ if(!ms) return ''; let n=Number(ms);
-    // HenrikDev game_start is seconds; guard against both seconds and ms.
-    if (n < 1e12) n = n * 1000;
-    const d=new Date(n); return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
-  function mapName(id){ return (id||'').replace('{/Game/Maps/','').replace(/.*\//,'').replace('_',' ').trim() || 'Unknown map'; }
+  const setErr=(m)=>errEl.textContent=m||'';
+  const show=(el,on)=>el.classList.toggle('hidden',!on);
+  const esc=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function fmtDate(ms){ if(!ms) return ''; let n=Number(ms); if(n<1e12) n=n*1000;
+    const d=new Date(n); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function mapName(id){ return (id||'').replace('{/Game/Maps/','').replace(/.*\//,'').replace('_',' ').trim()||'Unknown map'; }
 
   async function api(path){
-    const r = await fetch(path);
-    const j = await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
-    return j;
+    const r=await fetch(path); const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;
   }
 
-  // ---- step 1: search Riot ID ----
   $('searchBtn').addEventListener('click', async ()=>{
     const name=$('name').value.trim(), tag=$('tag').value.trim().replace(/^#/,''), region=$('region').value;
-    setErr(''); show(grid,false); show(summaryEl,false); show(historyEl,false); show(backRow,false);
+    setErr(''); show(teamsEl,false); show(summaryEl,false); show(historyEl,false); show(backRow,false);
     if(!name||!tag){ setErr('Enter both a game name and tag.'); return; }
     stepEl.textContent='Looking up '+name+'#'+tag+'…';
     try{
-      const acct = await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
+      const acct=await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
       currentName=name; currentTag=tag; currentRegion=region;
-      stepEl.textContent='Found '+escapeHtml(acct.gameName)+'#'+escapeHtml(acct.tagLine)+' — loading match history…';
-      const list = await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
+      stepEl.textContent='Found '+esc(acct.gameName)+'#'+esc(acct.tagLine)+' — loading history…';
+      const list=await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
       renderHistory(list.matches||[]);
-    }catch(e){
-      stepEl.textContent='';
-      if(e.message==='NO_KEY') setErr('Backend has no RIOT_API_KEY set. Add it to .env (local) or Vercel env vars.');
-      else if(e.message==='KEY_INVALID') setErr('Riot API key rejected (expired? free keys rotate ~24h).');
-      else if(e.message==='RATE_LIMITED') setErr('Riot rate limit hit — wait a minute and retry.');
-      else setErr('Could not load: '+e.message);
-    }
+    }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
   });
 
+  function mapErr(e){
+    if(e.message==='NO_KEY') return 'Backend has no HENRIK_API_KEY set. Add it to .env and restart.';
+    if(e.message==='KEY_INVALID') return 'HenrikDev key rejected — regenerate it in the dashboard.';
+    if(e.message==='RATE_LIMITED') return 'Rate limited (30/min on Basic). Wait a moment.';
+    return 'Could not load: '+e.message;
+  }
+
   function renderHistory(matches){
-    show(historyEl,true); show(grid,false); show(summaryEl,false); show(backRow,false);
+    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backRow,false);
     historyEl.innerHTML='';
-    if(!matches.length){ stepEl.textContent='No recent matches found for this account.'; return; }
+    if(!matches.length){ stepEl.textContent='No recent matches found.'; return; }
     stepEl.textContent='Match history — click one to vibe-check the lobby:';
     matches.slice(0,20).forEach(m=>{
       const d=document.createElement('div'); d.className='match';
-      d.innerHTML=`<div class="map">${escapeHtml(mapName(m.mapId))}</div>
-        <div class="mode">${escapeHtml(m.gameMode||'')}</div>
-        <div class="date">${fmtDate(m.startedAt)}</div>
-        <div class="go">vibe-check →</div>`;
+      d.innerHTML=`<div class="map">${esc(mapName(m.mapId))}</div>
+        <div class="mode">${esc(m.gameMode||'')}</div>
+        <div class="date">${fmtDate(m.startedAt)}</div><div class="go">vibe-check →</div>`;
       d.addEventListener('click',()=>openMatch(m.matchId));
       historyEl.appendChild(d);
     });
   }
 
-  // ---- step 2: open a match ----
   async function openMatch(matchId){
     setErr(''); stepEl.textContent='Loading match…';
     try{
-      const raw = await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}`);
-      const result = window.AreTheyCheating.analyzeMatch(raw, null);
-      show(historyEl,false); show(backRow,true);
-      stepEl.textContent='Post-game vibe report 🧂';
+      const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}`);
+      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      show(historyEl,false); show(backRow,true); stepEl.textContent='Post-game vibe report 🧂';
       renderResult(result);
-    }catch(e){
-      stepEl.textContent='';
-      if(e.message==='NO_KEY') setErr('Backend has no RIOT_API_KEY set.');
-      else if(e.message==='KEY_INVALID') setErr('Riot API key rejected (free keys rotate ~24h).');
-      else if(e.message==='RATE_LIMITED') setErr('Riot rate limit hit — wait a minute.');
-      else setErr('Could not load that match: '+e.message);
-    }
+    }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
   }
 
   $('demoBtn').addEventListener('click', async ()=>{
     setErr(''); show(historyEl,false); show(backRow,false); stepEl.textContent='Loading sample match…';
     try{
-      const raw = await api('/api/demo');
-      const result = window.AreTheyCheating.analyzeMatch(raw, null);
+      const raw=await api('/api/demo');
+      const result=window.AreTheyCheating.analyzeMatch(raw,null);
       show(backRow,true); stepEl.textContent='⚠️ SAMPLE DATA — not a real match';
       renderResult(result);
-    }catch(e){ setErr('Demo failed: '+e.message); }
+    }catch(e){ setErr(mapErr(e)); }
   });
 
   $('backBtn').addEventListener('click', async ()=>{
-    show(grid,false); show(summaryEl,false); show(backRow,false); stepEl.textContent='Match history:';
+    show(teamsEl,false); show(summaryEl,false); show(backRow,false); stepEl.textContent='Match history:';
     try{ const list=await api(`/api/matches/${encodeURIComponent(currentName)}/${encodeURIComponent(currentTag)}?region=${currentRegion}`); renderHistory(list.matches||[]); }
-    catch(e){ setErr('Could not reload history: '+e.message); }
+    catch(e){ setErr(mapErr(e)); }
   });
 
   function renderResult(result){
-    show(grid,true); show(summaryEl,true);
+    show(teamsEl,true); show(summaryEl,true);
     const cheaters=result.players.filter(p=>p.cheaterPct>=65).length;
     const throwers=result.players.filter(p=>p.throwerPct>=70).length;
-    summaryEl.innerHTML=`Analyzed <b>${result.players.length}</b> players over <b>${result.rounds}</b> rounds. `+
-      `Flagged <b>${cheaters}</b> possible cheater(s) and <b>${throwers}</b> possible thrower(s). Grain of salt strongly advised. 🧂`;
-    grid.innerHTML='';
-    const sorted=[...result.players].sort((a,b)=>(b.cheaterPct+b.throwerPct)-(a.cheaterPct+a.throwerPct));
-    for(const p of sorted){
-      const card=document.createElement('div');
-      card.className='card'+(p.cheaterPct>=85||p.throwerPct>=70?' kick':'');
-      let accent=ACCENTS.FINE;
-      if(p.headline==='CHEATER VIBES') accent=ACCENTS.CHEATER;
-      else if(p.headline==='THROWER DETECTED') accent=ACCENTS.THROWER;
-      else if(p.headline==='LOOKING SUS') accent=ACCENTS.SUS;
-      card.style.setProperty('--accent',accent);
-      const reasonsHTML=[...p.cheaterReasons,...p.throwerReasons].map(r=>`<li>${r}</li>`).join('')||'<li>nothing sus — boring and clean</li>';
-      card.innerHTML=`
-        <div class="top"><div class="name">${escapeHtml(p.name)}<span class="tag">#${escapeHtml(p.tag||'???')}</span></div>
-          <div class="enemy">${p.isEnemy?'⚔ enemy':'🛡 ally'}</div></div>
-        <div class="agent">${escapeHtml(p.agent||'unknown agent')} · ${p.kills}/${p.deaths}/${p.assists} · HS ${Math.round(p.hsPct*100)}%</div>
-        <div class="headline" style="color:${accent}">${p.headline}</div>
-        <div class="meter"><div class="lab"><span class="k">🤖 Cheating likelihood</span><span class="v">${p.cheaterPct}%</span></div><div class="bar cheat"><i style="width:${p.cheaterPct}%"></i></div></div>
-        <div class="meter"><div class="lab"><span class="k">🎭 Throwing likelihood</span><span class="v">${p.throwerPct}%</span></div><div class="bar throw"><i style="width:${p.throwerPct}%"></i></div></div>
-        <div class="verdict">"${p.cheaterVerdict}" ${p.throwerPct>=45?'· '+p.throwerVerdict:''}</div>
-        <div class="reasons"><div class="k" style="font-size:12px;color:var(--muted)">why the vibes say so:</div><ul>${reasonsHTML}</ul></div>`;
-      grid.appendChild(card);
-    }
+    summaryEl.innerHTML=`${result.players.length} players · ${result.rounds} rounds · `+
+      `<b>${cheaters}</b> possible cheater(s) · <b>${throwers}</b> possible thrower(s). Grain of salt advised. 🧂`;
+    teamsEl.innerHTML='';
+
+    // group by team
+    const byTeam={};
+    result.players.forEach(p=>{ const t=p.teamId||'Unknown'; (byTeam[t]=byTeam[t]||[]).push(p); });
+    const teamColors={'Blue':'#5b8cff','Red':'#ff4655'};
+    const teamNames={'Blue':'BLUE TEAM','Red':'RED TEAM'};
+    Object.keys(byTeam).forEach(team=>{
+      const players=byTeam[team];
+      const sec=document.createElement('div'); sec.className='team';
+      const color=teamColors[team]||'#8b94a6';
+      sec.innerHTML=`<div class="team-head">
+        <span class="team-dot" style="background:${color}"></span>
+        <span class="team-name">${teamNames[team]||esc(team)}</span>
+        <span class="team-sub">${players.length} players</span></div>`;
+      const grid=document.createElement('div'); grid.className='grid';
+      [...players].sort((a,b)=>(b.cheaterPct+b.throwerPct)-(a.cheaterPct+a.throwerPct)).forEach(p=>grid.appendChild(card(p)));
+      sec.appendChild(grid); teamsEl.appendChild(sec);
+    });
+  }
+
+  function card(p){
+    const c=document.createElement('div'); c.className='card'+(p.cheaterPct>=85||p.throwerPct>=70?' kick':'');
+    let accent=ACCENTS.FINE;
+    if(p.headline==='CHEATER VIBES') accent=ACCENTS.CHEATER;
+    else if(p.headline==='THROWER DETECTED') accent=ACCENTS.THROWER;
+    else if(p.headline==='LOOKING SUS') accent=ACCENTS.SUS;
+    c.style.setProperty('--accent',accent);
+    const reasons=[...p.cheaterReasons,...p.throwerReasons];
+    c.innerHTML=`
+      <div class="c-top"><div class="c-name">${esc(p.name)}<span class="ctag">#${esc(p.tag||'???')}</span></div>
+        <div class="c-head" style="color:${accent}">${p.headline}</div></div>
+      <div class="c-agent">${esc(p.agent||'unknown agent')}</div>
+      <div class="c-line"><span>K <b>${p.kills}</b></span><span>D <b>${p.deaths}</b></span><span>A <b>${p.assists}</b></span>
+        <span class="hs">HS <b>${Math.round(p.hsPct*100)}%</b></span><span>ACS <b>${Math.round(p.scorePerRound*13)||'-'}</b></span></div>
+      <div class="meter"><div class="lab"><span>🤖 Cheating</span><b>${p.cheaterPct}%</b></div><div class="bar cheat"><i style="width:${p.cheaterPct}%"></i></div></div>
+      <div class="meter"><div class="lab"><span>🎭 Throwing</span><b>${p.throwerPct}%</b></div><div class="bar throw"><i style="width:${p.throwerPct}%"></i></div></div>
+      <div class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' · '+esc(p.throwerVerdict):''}</div>
+      ${reasons.length?`<details class="reasons"><summary>why the vibes say so (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:'<div class="reasons" style="border:none;padding:0"></div>'}`;
+    return c;
   }
 </script>
 </body>
