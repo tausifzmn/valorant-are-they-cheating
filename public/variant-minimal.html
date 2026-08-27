@@ -137,6 +137,7 @@
   .fill{height:100%;width:0;border-radius:980px;transition:width .7s cubic-bezier(.22,1,.36,1)}
   .fill.cheat{background:linear-gradient(90deg,#ff6b78,var(--red))}
   .fill.throw{background:linear-gradient(90deg,#4a9bff,var(--accent))}
+.fill.smurf{background:linear-gradient(90deg,#3a8bff,#23e0c4)}
 
   .verdict{font-size:13.5px;margin-top:18px;color:var(--ink-2);line-height:1.5}
   .verdict .q{color:var(--ink-3)}
@@ -197,7 +198,7 @@
   const $ = (id) => document.getElementById(id);
   const teamsEl=$('teams'), errEl=$('err'), summaryEl=$('summary'),
         historyEl=$('history'), stepEl=$('step'), backRow=$('backRow');
-  let currentName=null, currentTag=null, currentRegion='na';
+  let currentName=null, currentTag=null, currentRegion='na', currentTier=0;
 
   const setErr=(m)=>errEl.textContent=m||'';
   const show=(el,on)=>el.classList.toggle('hidden',!on);
@@ -231,8 +232,8 @@
     stepEl.textContent='Looking up '+name+'#'+tag+'…';
     try{
       const acct=await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
-      currentName=name; currentTag=tag; currentRegion=region;
-      stepEl.textContent='Found '+esc(acct.gameName)+'#'+esc(acct.tagLine)+' — loading history…';
+      currentName=name; currentTag=tag; currentRegion=region; currentTier=acct.tierId||0;
+      stepEl.textContent='Found '+esc(acct.gameName)+'#'+esc(acct.tagLine)+(acct.tierName?' · '+esc(acct.tierName):'')+' — loading history…';
       const list=await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
       renderHistory(list.matches||[]);
     }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
@@ -260,8 +261,8 @@
   async function openMatch(matchId){
     setErr(''); stepEl.textContent='Loading match…';
     try{
-      const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}`);
-      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}?rank=${currentTier}`);
+      const result=window.AreTheyCheating.analyzeMatch(raw,null,currentTier);
       show(historyEl,false); show(backRow,true); stepEl.textContent='Post-game vibe report';
       renderResult(result);
     }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
@@ -271,7 +272,7 @@
     setErr(''); show(historyEl,false); show(backRow,false); stepEl.textContent='Loading sample match…';
     try{
       const raw=await api('/api/demo');
-      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      const result=window.AreTheyCheating.analyzeMatch(raw,null,currentTier);
       show(backRow,true); stepEl.textContent='Sample data — not a real match';
       renderResult(result);
     }catch(e){ setErr(mapErr(e)); }
@@ -289,8 +290,10 @@
     show(teamsEl,true); show(summaryEl,true);
     const cheaters=result.players.filter(p=>p.cheaterPct>=65).length;
     const throwers=result.players.filter(p=>p.throwerPct>=70).length;
+    const smurfs=result.players.filter(p=>p.smurfPct>=60).length;
+    const rankCtx=result.rank&&result.rank!=='Unknown'&&result.rank!=='Unranked'?(' · rank: '+result.rank):'';
     summaryEl.innerHTML=`${result.players.length} players · ${result.rounds} rounds · `+
-      `<b>${cheaters}</b> possible cheater(s) · <b>${throwers}</b> possible thrower(s). Grain of salt advised.`;
+      `<b>${cheaters}</b> possible cheater(s) · <b>${throwers}</b> possible thrower(s) · <b>${smurfs}</b> smurf(s)${rankCtx}. Grain of salt advised.`;
     teamsEl.innerHTML='';
 
     // group by team (normalize teamId/team field names)
@@ -358,6 +361,8 @@
       <div class="meter">
         <div class="meter-row"><span>Throwing</span><b>${p.throwerPct}%</b></div>
         <div class="track"><div class="fill throw" data-w="${p.throwerPct}"></div></div>
+        <div class="meter-row"><span>Smurf</span><b>${p.smurfPct}%</b></div>
+        <div class="track"><div class="fill smurf" data-w="${p.smurfPct}"></div></div>
       </div>
       ${verdictHtml?`<div class="verdict">${verdictHtml}</div>`:''}
       ${reasons.length?`<details class="reasons"><summary>Why the vibes say so (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}
