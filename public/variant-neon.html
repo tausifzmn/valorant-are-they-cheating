@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Are They Cheating? — Neon HUD</title>
+<style>
+  :root{
+    --bg0:#03060f; --bg1:#06101f; --bg2:#020409;
+    --glass:rgba(18,30,48,.42); --glass2:rgba(12,22,38,.55);
+    --line:rgba(120,200,220,.18); --line2:rgba(120,200,220,.30);
+    --txt:#eaf6ff; --muted:#8fa6bf; --faint:#5d748f;
+    --cyan:#23e0c4; --cyan-d:#0fb9a2;
+    --red:#ff4655; --red-glow:rgba(255,70,85,.55);
+    --magenta:#ff2bd6; --gold:#f5c518; --good:#3ddc84; --blue:#5b8cff;
+    --radius:16px;
+    --font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --mono:ui-monospace,'SF Mono','JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:var(--font);
+    color:var(--txt);
+    min-height:100vh;
+    padding:40px 18px 70px;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    background:
+      radial-gradient(780px 520px at 12% -8%, rgba(35,224,196,.16) 0%, transparent 55%),
+      radial-gradient(680px 560px at 92% 6%, rgba(255,43,214,.14) 0%, transparent 55%),
+      radial-gradient(900px 700px at 50% 120%, rgba(91,140,255,.10) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 45%, var(--bg2) 100%);
+    background-attachment:fixed;
+  }
+  /* HUD backdrop: faint grid + scanlines */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(120,200,220,.045) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(120,200,220,.045) 1px,transparent 1px);
+    background-size:46px 46px;
+    mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 78%);
+    -webkit-mask-image:radial-gradient(circle at 50% 35%, #000 0%, transparent 78%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.18) 2px 4px);
+  }
+  /* drifting neon blobs */
+  .blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.45;z-index:-1;pointer-events:none;animation:drift 18s ease-in-out infinite}
+  .blob.b1{width:340px;height:340px;background:var(--cyan);top:-80px;left:-60px}
+  .blob.b2{width:300px;height:300px;background:var(--magenta);bottom:-90px;right:-40px;animation-delay:-6s}
+  .blob.b3{width:260px;height:260px;background:var(--blue);top:40%;right:8%;animation-delay:-11s}
+  @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(24px,-30px) scale(1.08)}}
+
+  .wrap{max-width:980px;margin:0 auto;position:relative}
+
+  header{text-align:center;margin-bottom:8px}
+  h1{
+    font-size:clamp(28px,5.4vw,46px);margin:0;font-weight:800;letter-spacing:.01em;
+    background:linear-gradient(92deg,#fff 0%,var(--cyan) 55%,var(--magenta) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 26px rgba(35,224,196,.25);
+    position:relative;display:inline-block;
+  }
+  h1::after{
+    content:"";position:absolute;left:0;right:0;bottom:-6px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--cyan),var(--magenta),transparent);
+    filter:blur(.3px);opacity:.8;
+  }
+  .tag{color:var(--muted);margin:14px 0 0;font-size:13.5px;letter-spacing:.02em}
+
+  /* glass primitive */
+  .glass{
+    background:var(--glass);
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    border:1px solid var(--line);
+    box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+
+  .disclaimer{
+    max-width:680px;margin:20px auto 24px;text-align:center;font-size:12px;color:var(--faint);
+    border-radius:12px;padding:11px 16px;
+  }
+  .disclaimer b{color:var(--red);text-shadow:0 0 10px var(--red-glow)}
+
+  /* HUD corner ticks utility */
+  .hud{position:relative}
+  .hud::before,.hud::after{content:"";position:absolute;width:14px;height:14px;pointer-events:none;z-index:2}
+  .hud::before{top:8px;left:8px;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan);opacity:.7}
+  .hud::after{bottom:8px;right:8px;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);opacity:.7}
+
+  .search{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;
+    padding:16px;border-radius:var(--radius);max-width:640px;margin-left:auto;margin-right:auto}
+  .field{position:relative}
+  .field label{position:absolute;top:7px;left:13px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);pointer-events:none}
+  .search input,.search select{
+    background:rgba(6,14,26,.6);border:1px solid var(--line2);color:var(--txt);
+    border-radius:10px;padding:18px 13px 7px;font:inherit;font-size:14px;transition:border-color .15s,box-shadow .15s;
+  }
+  .search input:focus,.search select:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 0 18px rgba(35,224,196,.25)}
+  .search input.name{width:min(210px,42vw)}
+  .search input.tag{width:96px;text-transform:uppercase}
+  .search select{cursor:pointer;padding-top:18px}
+
+  button{cursor:pointer;border:none;border-radius:10px;padding:12px 20px;font:inherit;font-weight:700;letter-spacing:.02em;
+    transition:transform .07s,filter .15s,box-shadow .15s,background .15s}
+  button:active{transform:translateY(1px)}
+  .primary{color:#02110e;background:linear-gradient(92deg,var(--cyan),var(--cyan-d));
+    box-shadow:0 0 18px rgba(35,224,196,.45);text-shadow:0 1px 0 rgba(255,255,255,.25)}
+  .primary:hover{filter:brightness(1.08);box-shadow:0 0 26px rgba(35,224,196,.65)}
+  .ghost{color:var(--txt);background:rgba(12,22,38,.5);border:1px solid var(--line2)}
+  .ghost:hover{border-color:var(--magenta);box-shadow:0 0 16px rgba(255,43,214,.3);color:#fff}
+
+  .row{display:flex;gap:12px;justify-content:center;margin:14px 0 4px}
+  .hint{color:var(--faint);text-align:center;font-size:12px;margin-bottom:14px}
+  .err{color:var(--red);text-align:center;min-height:18px;margin:6px 0;font-size:13px;text-shadow:0 0 10px var(--red-glow)}
+  .step{font-size:13px;color:var(--cyan);text-align:center;margin:10px 0;min-height:18px;letter-spacing:.02em;
+    text-shadow:0 0 12px rgba(35,224,196,.4)}
+
+  /* match history */
+  .history{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:10px 0}
+  .match{padding:14px;border-radius:14px;cursor:pointer;position:relative;overflow:hidden;
+    transition:transform .1s,border-color .15s,box-shadow .15s}
+  .match::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan);opacity:.8;box-shadow:0 0 12px var(--cyan)}
+  .match:hover{transform:translateY(-3px);border-color:var(--cyan);box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 22px rgba(35,224,196,.25)}
+  .match .map{font-weight:800;font-size:15px;color:#fff}
+  .match .mode{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+  .match .date{color:var(--faint);font-size:11px;margin-top:9px}
+  .match .go{color:var(--cyan);font-size:11px;margin-top:7px;font-weight:800;letter-spacing:.04em;text-shadow:0 0 10px rgba(35,224,196,.5)}
+
+  /* results */
+  .back{display:flex;justify-content:center;margin:8px 0 16px}
+  .back button{display:inline-flex;align-items:center;gap:8px}
+  .summary{text-align:center;margin:8px 0 22px;color:var(--muted);font-size:13.5px}
+  .summary b{color:var(--cyan);text-shadow:0 0 10px rgba(35,224,196,.5)}
+  .summary .ch{color:var(--red);text-shadow:0 0 10px var(--red-glow)}
+  .summary .th{color:var(--magenta);text-shadow:0 0 10px rgba(255,43,214,.5)}
+
+  .team{margin:0 0 26px}
+  .team-head{display:flex;align-items:center;gap:11px;margin:0 0 14px;padding-bottom:10px;
+    border-bottom:1px solid var(--line)}
+  .team-dot{width:10px;height:10px;border-radius:50%}
+  .team-name{font-weight:800;font-size:14px;letter-spacing:.16em;text-transform:uppercase}
+  .team-sub{color:var(--faint);font-size:12px;margin-left:auto;font-family:var(--mono)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+  .card{padding:16px 16px 14px;position:relative;overflow:hidden;border-radius:var(--radius);
+    border:1px solid var(--line);background:var(--glass2);
+    backdrop-filter:blur(13px) saturate(140%);-webkit-backdrop-filter:blur(13px) saturate(140%);
+    box-shadow:0 8px 28px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.05);
+    transition:transform .1s,border-color .15s,box-shadow .15s}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--faint));
+    opacity:.95;box-shadow:0 0 14px var(--accent,transparent)}
+  .card.kick{box-shadow:0 8px 30px rgba(0,0,0,.45), 0 0 26px color-mix(in srgb,var(--accent) 38%,transparent), inset 0 1px 0 rgba(255,255,255,.06)}
+  .card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 12px 34px rgba(0,0,0,.5),0 0 28px color-mix(in srgb,var(--accent) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.07)}
+
+  .c-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .c-name{font-weight:800;font-size:15.5px;line-height:1.12;color:#fff}
+  .c-name .ctag{color:var(--faint);font-weight:500;font-size:11px;margin-left:3px;font-family:var(--mono)}
+  .c-head{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:3px 7px;border-radius:6px;border:1px solid currentColor}
+  .c-agent{color:var(--muted);font-size:12px;margin:4px 0 12px;letter-spacing:.02em}
+  .c-agent .ico{opacity:.8}
+
+  .c-line{display:flex;gap:15px;font-size:11.5px;color:var(--muted);margin-bottom:13px;font-family:var(--mono);flex-wrap:wrap}
+  .c-line b{color:var(--txt);font-weight:700}
+  .c-line .hs{color:var(--gold);text-shadow:0 0 8px rgba(245,197,24,.4)}
+  .c-line .acs{color:var(--cyan)}
+
+  .meter{margin-bottom:10px}
+  .meter .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-bottom:5px;letter-spacing:.03em}
+  .meter .lab .k{text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+  .meter .lab b{color:var(--txt);font-weight:800;font-family:var(--mono);font-size:13px}
+  .bar{height:7px;background:rgba(4,10,18,.7);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative}
+  .bar>i{display:block;height:100%;border-radius:6px;transition:width .6s cubic-bezier(.2,.8,.2,1);position:relative}
+  .bar.cheat>i{background:linear-gradient(90deg,#ff8a5b,var(--red));box-shadow:0 0 12px var(--red-glow)}
+  .bar.throw>i{background:linear-gradient(90deg,var(--cyan),var(--magenta));box-shadow:0 0 12px rgba(255,43,214,.45)}
+  .bar>i::after{content:"";position:absolute;top:0;right:0;bottom:0;width:14px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55));opacity:.7}
+
+  .verdict{font-size:12px;margin-top:11px;color:var(--txt);font-style:italic;line-height:1.4;
+    padding-left:9px;border-left:2px solid var(--line2)}
+  .reasons{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  .reasons summary{font-size:11px;color:var(--faint);cursor:pointer;user-select:none;letter-spacing:.03em;
+    transition:color .15s;list-style:none}
+  .reasons summary::-webkit-details-marker{display:none}
+  .reasons summary::before{content:"▸ ";color:var(--cyan)}
+  .reasons[open] summary::before{content:"▾ "}
+  .reasons summary:hover{color:var(--cyan)}
+  .reasons ul{margin:8px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted);line-height:1.55}
+  .reasons li{margin-bottom:3px}
+  .reasons li::marker{color:var(--cyan)}
+
+  footer{text-align:center;margin-top:38px;color:var(--faint);font-size:11.5px;letter-spacing:.02em}
+  code{background:rgba(6,14,26,.6);padding:1px 6px;border-radius:5px;color:var(--cyan);border:1px solid var(--line)}
+  .hidden{display:none}
+  @media (max-width:520px){ .wrap{padding-top:20px} h1{font-size:30px} }
+</style>
+</head>
+<body>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+
+<div class="wrap">
+  <header>
+    <h1>Are They Cheating?</h1>
+    <p class="tag">search a Riot ID → pick a match → vibe-check the whole lobby</p>
+  </header>
+
+  <div class="disclaimer glass">
+    <b>For entertainment only.</b> This app cannot and does not detect real cheating — it runs a goofy
+    joke heuristic on publicly visible match stats. Do not accuse real people of cheating based on it.
+  </div>
+
+  <div class="search glass hud">
+    <div class="field"><label>Game Name</label><input class="name" id="name" placeholder="e.g. TenZ" /></div>
+    <div class="field"><label>Tag</label><input class="tag" id="tag" placeholder="NA1" /></div>
+    <select id="region" aria-label="Region">
+      <option value="na">NA</option><option value="eu">EU</option>
+      <option value="ap">AP</option><option value="kr">KR</option>
+      <option value="latam">LATAM</option><option value="br">BR</option>
+    </select>
+    <button class="primary" id="searchBtn">🔍 Scan</button>
+  </div>
+  <div class="row">
+    <button class="ghost" id="demoBtn">🎲 Sample match (no key)</button>
+  </div>
+  <div class="hint">e.g. <code>TenZ#NA1</code> — name and tag are separate fields.</div>
+
+  <div class="err" id="err"></div>
+  <div class="step" id="step"></div>
+  <div class="back hidden" id="backRow"><button class="ghost" id="backBtn">← Match history</button></div>
+  <div class="history hidden" id="history"></div>
+  <div class="summary hidden" id="summary"></div>
+  <div id="teams"></div>
+
+  <footer>Built for post-game salt · Data via the HenrikDev Valorant API · key stays server-side 🔒</footer>
+</div>
+
+<script>
+/* =========================================================================
+ * Inlined analysis engine (mirrors /analysis.js) — sets window.AreTheyCheating
+ * ========================================================================= */
+(function (root) {
+  'use strict';
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const round = (n) => Math.round(n);
+  function vibeJitter(str){ let h=0; for(let i=0;i<(str||'').length;i++) h=(h*31+str.charCodeAt(i))%1000; return (h%11)-5; }
+  function parseMatch(raw){
+    if(!raw||typeof raw!=='object') throw new Error('No match data provided.');
+    const info=raw.info||raw; const players=info.players||[]; const teams=info.teams||[];
+    if(!players.length) throw new Error('Match has no players.');
+    const rounds=(teams[0]&&teams[0].roundsPlayed)||0;
+    const list=players.map((p)=>{
+      const s=p.stats||{}; const hs=s.headshots||0,bs=s.bodyshots||0,ls=s.legshots||0;
+      const totalShots=hs+bs+ls; const kills=s.kills||0,deaths=s.deaths||0,assists=s.assists||0;
+      const score=s.score||0; const dmgDealt=s.damageDealt||0; const dmgRecv=s.damageReceived||0; const fb=s.firstBloods||0;
+      const kd=deaths===0?kills:kills/deaths;
+      const hsPct=totalShots===0?0:hs/totalShots;
+      const fbRate=rounds===0?0:fb/rounds;
+      const scorePerRound=rounds===0?score:score/rounds;
+      const dmgPerRound=rounds===0?dmgDealt:dmgDealt/rounds;
+      return {puuid:p.puuid||'',name:p.gameName||p.name||'Unknown',tag:p.tagLine||'',agent:p.characterId||p.agent||'',
+        team:p.teamId||p.team||'',premade:!!p.premade,kills,deaths,assists,score,hs,bs,ls,totalShots,dmgDealt,dmgRecv,fb,
+        kd,hsPct,fbRate,scorePerRound,dmgPerRound};
+    });
+    return {rounds,teams,players:list};
+  }
+  function cheaterScore(st){
+    let pts=0; const reasons=[];
+    if(st.hsPct>0.30){ pts+=clamp((st.hsPct-0.30)/0.40*32,0,32); if(st.hsPct>0.45) reasons.push(`Headshot ${round(st.hsPct*100)}% — aiming like a laser`); }
+    if(st.kd>1.6){ pts+=clamp((st.kd-1.6)*22,0,26); if(st.kd>2.2) reasons.push(`KD ${st.kd.toFixed(2)} — statistically improbable`); }
+    if(st.scorePerRound>11){ pts+=clamp((st.scorePerRound-11)/7*20,0,20); if(st.scorePerRound>15) reasons.push(`Combat score ${round(st.scorePerRound)}/round — demon hours`); }
+    if(st.fbRate>0.22){ pts+=clamp((st.fbRate-0.22)*70,0,16); if(st.fbRate>0.30) reasons.push(`${round(st.fbRate*100)}% first-bloods — always first to peek`); }
+    if(st.kills>=20&&st.deaths<=2){ pts+=14; reasons.push(`${st.kills} kills, ${st.deaths} deaths — untouchable`); }
+    if(st.dmgPerRound>200){ pts+=clamp((st.dmgPerRound-200)/10,0,12); }
+    const pct=clamp(round(5+pts+vibeJitter(st.puuid+st.name)),0,99);
+    return {pct,reasons};
+  }
+  function throwerScore(st){
+    let pts=0; const reasons=[];
+    if(st.kd<0.6){ pts+=clamp((0.6-st.kd)*45,0,34); if(st.kd<0.4) reasons.push(`KD ${st.kd.toFixed(2)} — feeding arc`); }
+    if(st.scorePerRound<6){ pts+=clamp((6-st.scorePerRound)/0.2,0,24); if(st.scorePerRound<4) reasons.push(`Combat score ${round(st.scorePerRound)}/round — AFK-ish`); }
+    if(st.dmgDealt>0&&st.dmgRecv/Math.max(st.dmgDealt,1)>1.8){ pts+=14; reasons.push('Glass cannon in reverse — taking way more than dealing'); }
+    if(st.deaths>=20&&st.kills<=10){ pts+=10; reasons.push(`${st.deaths} deaths, ${st.kills} kills — ticket to the shadow realm`); }
+    if(st.scorePerRound<4){ pts+=20; reasons.push(`Combat score ${round(st.scorePerRound)}/round — were you even there?`); }
+    const pct=clamp(round(3+pts+vibeJitter(st.name+'throw')),0,99);
+    return {pct,reasons};
+  }
+  function cheaterVerdict(pct){ if(pct>=85)return '🚨 99% SUS — uninstall, touch grass, seek help'; if(pct>=65)return '😳 Shadows are moving… someone sees through walls'; if(pct>=45)return '🤔 Suspicious, but could just be cracked'; if(pct>=25)return '🫤 Probably just good'; return '✅ Clean (this time)'; }
+  function throwerVerdict(pct){ if(pct>=70)return '🎭 Full throw arc — feeding for content'; if(pct>=45)return '🪦 Might be throwing / having a rough one'; if(pct>=25)return '🎯 Playing normal-ish'; return '🎯 Playing normal'; }
+  function headline(st,c,t){ if(t.pct>=70)return 'THROWER DETECTED'; if(c.pct>=85)return 'CHEATER VIBES'; if(c.pct>=45)return 'LOOKING SUS'; return 'PROBABLY FINE'; }
+  function analyzeMatch(raw,myPuuid){
+    const {rounds,teams,players}=parseMatch(raw);
+    const verdicts=players.map((st)=>{
+      const c=cheaterScore(st); const t=throwerScore(st);
+      return {...st,cheaterPct:c.pct,throwerPct:t.pct,cheaterReasons:c.reasons,throwerReasons:t.reasons,
+        cheaterVerdict:cheaterVerdict(c.pct),throwerVerdict:throwerVerdict(t.pct),headline:headline(st,c,t),
+        isEnemy:myPuuid?st.team!==(players.find(x=>x.puuid===myPuuid)||{}).team:true};
+    });
+    return {rounds,teams,players:verdicts};
+  }
+  root.AreTheyCheating={analyzeMatch,parseMatch,cheaterScore,throwerScore,cheaterVerdict,throwerVerdict};
+})(typeof window!=='undefined'?window:globalThis);
+
+/* =========================================================================
+ * UI / HUD wiring
+ * ========================================================================= */
+(function(){
+  const $=id=>document.getElementById(id);
+  const teamsEl=$('teams'),errEl=$('err'),summaryEl=$('summary'),historyEl=$('history'),stepEl=$('step'),backRow=$('backRow');
+  const ACCENTS={CHEATER:'#ff4655',THROWER:'#ff2bd6',SUS:'#f5c518',FINE:'#3ddc84'};
+  let currentName=null,currentTag=null,currentRegion='na';
+
+  const setErr=m=>errEl.textContent=m||'';
+  const show=(el,on)=>el.classList.toggle('hidden',!on);
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function fmtDate(ms){ if(!ms)return ''; let n=Number(ms); if(n<1e12)n=n*1000; const d=new Date(n); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function mapName(id){ return (id||'').replace('{/Game/Maps/','').replace(/.*\//,'').replace('_',' ').trim()||'Unknown map'; }
+  function mapErr(e){
+    if(e.message==='NO_KEY') return 'Backend has no HENRIK_API_KEY set. Add it to .env and restart.';
+    if(e.message==='KEY_INVALID') return 'HenrikDev key rejected — regenerate it in the dashboard.';
+    if(e.message==='RATE_LIMITED') return 'Rate limited (30/min on Basic). Wait a moment.';
+    return 'Could not load: '+e.message;
+  }
+  async function api(path){ const r=await fetch(path); const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j; }
+
+  $('searchBtn').addEventListener('click',async()=>{
+    const name=$('name').value.trim(),tag=$('tag').value.trim().replace(/^#/,''),region=$('region').value;
+    setErr(''); show(teamsEl,false); show(summaryEl,false); show(historyEl,false); show(backRow,false);
+    if(!name||!tag){ setErr('Enter both a game name and tag.'); return; }
+    stepEl.textContent='► Locating '+name+'#'+tag+'…';
+    try{
+      const acct=await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
+      currentName=name; currentTag=tag; currentRegion=region;
+      stepEl.textContent='✓ Found '+esc(acct.gameName)+'#'+esc(acct.tagLine)+' — pulling history…';
+      const list=await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
+      renderHistory(list.matches||[]);
+    }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
+  });
+
+  function renderHistory(matches){
+    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backRow,false);
+    historyEl.innerHTML='';
+    if(!matches.length){ stepEl.textContent='No recent matches found.'; return; }
+    stepEl.textContent='Match history — select a node to scan:';
+    matches.slice(0,20).forEach(m=>{
+      const d=document.createElement('div'); d.className='match glass';
+      d.innerHTML=`<div class="map">${esc(mapName(m.mapId))}</div>
+        <div class="mode">${esc(m.gameMode||'')}</div>
+        <div class="date">${fmtDate(m.startedAt)}</div><div class="go">vibe-check →</div>`;
+      d.addEventListener('click',()=>openMatch(m.matchId));
+      historyEl.appendChild(d);
+    });
+  }
+
+  async function openMatch(matchId){
+    setErr(''); stepEl.textContent='► Decrypting match telemetry…';
+    try{
+      const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}`);
+      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      show(historyEl,false); show(backRow,true); stepEl.textContent='◈ Post-game vibe report';
+      renderResult(result);
+    }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
+  }
+
+  $('demoBtn').addEventListener('click',async()=>{
+    setErr(''); show(historyEl,false); show(backRow,false); stepEl.textContent='► Loading sample telemetry…';
+    try{
+      const raw=await api('/api/demo');
+      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      show(backRow,true); stepEl.textContent='⚠ SAMPLE DATA — not a real match';
+      renderResult(result);
+    }catch(e){ setErr(mapErr(e)); }
+  });
+
+  $('backBtn').addEventListener('click',async()=>{
+    show(teamsEl,false); show(summaryEl,false); show(backRow,false); stepEl.textContent='Match history:';
+    try{ const list=await api(`/api/matches/${encodeURIComponent(currentName)}/${encodeURIComponent(currentTag)}?region=${currentRegion}`); renderHistory(list.matches||[]); }
+    catch(e){ setErr(mapErr(e)); }
+  });
+
+  function renderResult(result){
+    show(teamsEl,true); show(summaryEl,true);
+    const cheaters=result.players.filter(p=>p.cheaterPct>=65).length;
+    const throwers=result.players.filter(p=>p.throwerPct>=70).length;
+    summaryEl.innerHTML=`${result.players.length} operatives · ${result.rounds} rounds · `+
+      `<b class="ch">${cheaters}</b> possible cheater(s) · <b class="th">${throwers}</b> possible thrower(s). Grain of salt advised. 🧂`;
+    teamsEl.innerHTML='';
+
+    const byTeam={};
+    result.players.forEach(p=>{ const t=p.teamId||'Unknown'; (byTeam[t]=byTeam[t]||[]).push(p); });
+    const teamColors={'Blue':'#23e0c4','Red':'#ff4655'};
+    const teamNames={'Blue':'Blue Team','Red':'Red Team'};
+    Object.keys(byTeam).forEach(team=>{
+      const players=byTeam[team];
+      const sec=document.createElement('div'); sec.className='team';
+      const color=teamColors[team]||'#8fa6bf';
+      sec.innerHTML=`<div class="team-head">
+        <span class="team-dot" style="background:${color};box-shadow:0 0 12px ${color}"></span>
+        <span class="team-name" style="color:${color};text-shadow:0 0 12px ${color}66">${teamNames[team]||esc(team)}</span>
+        <span class="team-sub">${players.length} NODES</span></div>`;
+      const grid=document.createElement('div'); grid.className='grid';
+      [...players].sort((a,b)=>(b.cheaterPct+b.throwerPct)-(a.cheaterPct+a.throwerPct)).forEach(p=>grid.appendChild(card(p)));
+      sec.appendChild(grid); teamsEl.appendChild(sec);
+    });
+  }
+
+  function card(p){
+    const c=document.createElement('div'); c.className='card'+(p.cheaterPct>=85||p.throwerPct>=70?' kick':'');
+    let accent=ACCENTS.FINE, headColor=ACCENTS.FINE;
+    if(p.headline==='CHEATER VIBES'){ accent=ACCENTS.CHEATER; }
+    else if(p.headline==='THROWER DETECTED'){ accent=ACCENTS.THROWER; }
+    else if(p.headline==='LOOKING SUS'){ accent=ACCENTS.SUS; }
+    c.style.setProperty('--accent',accent);
+    const reasons=[...p.cheaterReasons,...p.throwerReasons];
+    c.innerHTML=`
+      <div class="c-top"><div class="c-name">${esc(p.name)}<span class="ctag">#${esc(p.tag||'???')}</span></div>
+        <div class="c-head" style="color:${accent}">${p.headline}</div></div>
+      <div class="c-agent"><span class="ico">◈</span> ${esc(p.agent||'unknown agent')}</div>
+      <div class="c-line"><span>K <b>${p.kills}</b></span><span>D <b>${p.deaths}</b></span><span>A <b>${p.assists}</b></span>
+        <span class="hs">HS <b>${Math.round(p.hsPct*100)}%</b></span><span class="acs">ACS <b>${Math.round(p.scorePerRound)}</b></span></div>
+      <div class="meter"><div class="lab"><span class="k">🤖 Cheating</span><b>${p.cheaterPct}%</b></div><div class="bar cheat"><i style="width:${p.cheaterPct}%"></i></div></div>
+      <div class="meter"><div class="lab"><span class="k">🎭 Throwing</span><b>${p.throwerPct}%</b></div><div class="bar throw"><i style="width:${p.throwerPct}%"></i></div></div>
+      <div class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' · '+esc(p.throwerVerdict):''}</div>
+      ${reasons.length?`<details class="reasons"><summary>why the vibes say so (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}`;
+    return c;
+  }
+})();
+</script>
+</body>
+</html>

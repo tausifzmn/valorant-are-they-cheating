@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARE THEY CHEATING? — THE VIBE TRIBUNAL</title>
+<style>
+  :root{
+    --ink:#0a0a0a;
+    --paper:#f5f5f5;
+    --red:#ff4655;
+    --yellow:#ffd400;
+    --amber:#ff8a3d;
+    --blue:#4d9fff;
+    --green:#2bd96b;
+    --mut:#8a8a8a;
+    --line:#2a2a2a;
+    --mono: ui-monospace, "Cascadia Mono", "Courier New", monospace;
+    --disp: "Arial Narrow", "Helvetica Neue", "Roboto Condensed", Impact, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--mono);
+    font-size:14px;
+    line-height:1.5;
+  }
+
+  /* ---------- masthead / frame ---------- */
+  .sheet{max-width:1000px;margin:24px auto;background:var(--ink);border:4px solid var(--paper)}
+  .masthead{
+    background:var(--red);color:var(--ink);
+    border-bottom:4px solid var(--ink);
+    padding:20px 22px 18px;position:relative;overflow:hidden;
+  }
+  .masthead .kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+  .masthead h1{
+    font-family:var(--disp);font-weight:800;text-transform:uppercase;
+    font-size:clamp(40px,9vw,88px);line-height:.86;margin:6px 0 10px;letter-spacing:-.01em;
+  }
+  .masthead .sub{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;max-width:640px}
+  .masthead .badge{
+    position:absolute;top:16px;right:16px;border:3px solid var(--ink);background:var(--ink);
+    color:var(--red);font-weight:800;padding:6px 10px;transform:rotate(7deg);
+    font-size:11px;letter-spacing:.1em;
+  }
+  .body{padding:22px 20px 44px}
+
+  /* ---------- disclaimer / search ---------- */
+  .disclaimer{
+    border:3px solid var(--yellow);background:#191400;color:var(--paper);
+    padding:12px 14px;font-size:12px;margin-bottom:22px;line-height:1.5;
+  }
+  .disclaimer b{color:var(--yellow);text-transform:uppercase}
+
+  .search{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-bottom:10px}
+  .search input,.search select{
+    font-family:var(--mono);font-size:14px;background:#000;color:var(--paper);
+    border:3px solid var(--paper);padding:13px 12px;
+  }
+  .search input.name{width:min(220px,42vw)}
+  .search input.tag{width:92px;text-transform:uppercase}
+  .search select{cursor:pointer}
+  .search button.search-go{
+    border:3px solid var(--red);background:var(--red);color:var(--ink);
+    font-family:var(--mono);font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    padding:13px 22px;cursor:pointer;
+  }
+  .search button.search-go:hover{background:var(--ink);color:var(--red)}
+
+  .row{margin:10px 0 6px}
+  button.ghost{
+    font-family:var(--mono);background:var(--ink);color:var(--paper);
+    border:3px solid var(--paper);padding:11px 16px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.05em;cursor:pointer;
+  }
+  button.ghost:hover{background:var(--paper);color:var(--ink)}
+
+  .hint{color:var(--mut);font-size:12px;margin:8px 0 16px}
+  .hint code{background:#000;border:1px solid var(--line);padding:1px 5px;color:var(--red)}
+  .err{color:var(--red);min-height:18px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+  .step{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin:8px 0}
+  .summary{border:3px solid var(--paper);padding:12px 14px;margin:6px 0 18px;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  .summary b{color:var(--red)}
+
+  /* ---------- match history ---------- */
+  .back{margin:6px 0 16px}
+  .history{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin:10px 0}
+  .match{
+    border:3px solid var(--paper);padding:14px 14px 12px;cursor:pointer;background:#000;
+    position:relative;transition:transform .05s;
+  }
+  .match:hover{border-color:var(--red);transform:translate(-2px,-2px)}
+  .match .idx{position:absolute;top:6px;right:10px;font-family:var(--disp);font-size:34px;font-weight:800;color:var(--line);line-height:1}
+  .match .map{font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:23px;line-height:1;margin-bottom:4px}
+  .match .mode{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+  .match .date{font-size:11px;color:var(--mut);margin-top:14px}
+  .match .go{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--red);margin-top:6px}
+
+  /* ---------- results / teams ---------- */
+  .team{margin:0 0 26px}
+  .team-head{
+    background:var(--teamc,#888);color:var(--ink);
+    border:3px solid var(--ink);padding:10px 14px;display:flex;align-items:baseline;gap:12px;margin-bottom:14px;
+  }
+  .team-name{font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:30px;letter-spacing:-.01em;line-height:1}
+  .team-sub{margin-left:auto;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .card{position:relative;border:3px solid var(--teamc,#666);background:#000;padding:14px 14px 12px;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;right:0;height:5px;background:var(--accent,#666)}
+  .card.flagged{border-color:var(--red);background:#160a0c}
+
+  .c-head{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:var(--a,var(--mut));color:var(--ink);padding:3px 7px;margin-bottom:8px}
+  .c-name{font-family:var(--disp);font-weight:800;text-transform:uppercase;font-size:24px;line-height:.95}
+  .c-name .ctag{font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:400;margin-left:4px}
+  .c-agent{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:4px 0 12px}
+
+  .c-stats{display:flex;border:2px solid var(--line);margin-bottom:12px}
+  .c-stats>div{flex:1;border-right:2px solid var(--line);padding:6px 4px;text-align:center}
+  .c-stats>div:last-child{border-right:none}
+  .c-stats span{display:block;font-size:9px;letter-spacing:.1em;color:var(--mut)}
+  .c-stats b{display:block;font-family:var(--disp);font-size:22px;font-weight:800}
+
+  .meter{margin-bottom:10px}
+  .mlab{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin-bottom:3px}
+  .mlab b{font-family:var(--disp);font-size:16px}
+  .bar{height:14px;background:#111;border:2px solid var(--line);overflow:hidden}
+  .bar>i{display:block;height:100%}
+  .bar .cheat{background:var(--red)}
+  .bar .throw{background:var(--yellow)}
+
+  .verdict{font-style:italic;font-size:12px;color:var(--paper);margin:10px 0 0;line-height:1.4}
+  .reasons{margin-top:10px;border-top:2px solid var(--line);padding-top:8px}
+  .reasons summary{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--mut);cursor:pointer;user-select:none}
+  .reasons summary:hover{color:var(--paper)}
+  .reasons ul{margin:8px 0 0;padding-left:16px;font-size:11px;line-height:1.5;color:var(--mut)}
+
+  .stamp{
+    position:absolute;top:34px;right:8px;transform:rotate(-9deg);
+    border:3px solid var(--red);color:var(--red);font-weight:800;font-size:13px;letter-spacing:.05em;
+    padding:3px 8px;background:rgba(0,0,0,.45);
+  }
+
+  footer{margin-top:30px;border-top:3px solid var(--line);padding-top:14px;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <div class="kicker">THE VIBE TRIBUNAL · ISSUE NO.1 · EST. 2024</div>
+    <h1>Are They<br>Cheating?</h1>
+    <div class="sub">Search a Riot ID → pick a match → vibe-check the whole lobby</div>
+    <div class="badge">100% VIBES</div>
+  </div>
+
+  <div class="body">
+    <div class="disclaimer">
+      <b>For entertainment only.</b> This app cannot and does not detect real cheating — it runs a goofy
+      joke heuristic on publicly visible match stats. Do not accuse real people of cheating based on it.
+    </div>
+
+    <div class="search">
+      <input class="name" id="name" placeholder="GAME NAME" />
+      <input class="tag" id="tag" placeholder="TAG" />
+      <select id="region">
+        <option value="na">NA</option><option value="eu">EU</option>
+        <option value="ap">AP</option><option value="kr">KR</option>
+        <option value="latam">LATAM</option><option value="br">BR</option>
+      </select>
+      <button class="search-go" id="searchBtn">Search</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="demoBtn">Sample match (no key)</button>
+    </div>
+    <div class="hint">e.g. <code>TenZ#NA1</code> — name and tag are separate fields.</div>
+
+    <div class="err" id="err"></div>
+    <div class="step" id="step"></div>
+    <div class="back hidden" id="backRow"><button class="ghost" id="backBtn">&larr; Match history</button></div>
+    <div class="history hidden" id="history"></div>
+    <div class="summary hidden" id="summary"></div>
+    <div id="teams"></div>
+
+    <footer>Built for post-game salt · Data via the HenrikDev Valorant API · key stays server-side</footer>
+  </div>
+</div>
+
+<script src="/analysis.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const teamsEl=$('teams'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backRow=$('backRow');
+  const ACCENTS={CHEATER:'#ff4655',THROWER:'#ffd400',SUS:'#ff8a3d',FINE:'#2bd96b'};
+  let currentName=null, currentTag=null, currentRegion='na';
+
+  const setErr=(m)=>errEl.textContent=m||'';
+  const show=(el,on)=>el.classList.toggle('hidden',!on);
+  const esc=(s)=>String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function fmtDate(ms){ if(!ms) return ''; let n=Number(ms); if(n<1e12) n=n*1000;
+    const d=new Date(n); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  function mapName(id){ return (id||'').replace('{/Game/Maps/','').replace(/.*\//,'').replace('_',' ').trim()||'Unknown map'; }
+
+  async function api(path){
+    const r=await fetch(path); const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;
+  }
+
+  $('searchBtn').addEventListener('click', async ()=>{
+    const name=$('name').value.trim(), tag=$('tag').value.trim().replace(/^#/,''), region=$('region').value;
+    setErr(''); show(teamsEl,false); show(summaryEl,false); show(historyEl,false); show(backRow,false);
+    if(!name||!tag){ setErr('Enter both a game name and tag.'); return; }
+    stepEl.textContent='Looking up '+name+'#'+tag+'…';
+    try{
+      const acct=await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
+      currentName=name; currentTag=tag; currentRegion=region;
+      stepEl.textContent='Found '+esc(acct.gameName)+'#'+esc(acct.tagLine)+' — loading history…';
+      const list=await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
+      renderHistory(list.matches||[]);
+    }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
+  });
+
+  function mapErr(e){
+    if(e.message==='NO_KEY') return 'Backend has no HENRIK_API_KEY set. Add it to .env and restart.';
+    if(e.message==='KEY_INVALID') return 'HenrikDev key rejected — regenerate it in the dashboard.';
+    if(e.message==='RATE_LIMITED') return 'Rate limited (30/min on Basic). Wait a moment.';
+    return 'Could not load: '+e.message;
+  }
+
+  function renderHistory(matches){
+    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backRow,false);
+    historyEl.innerHTML='';
+    if(!matches.length){ stepEl.textContent='No recent matches found.'; return; }
+    stepEl.textContent='Match history — click one to vibe-check the lobby:';
+    matches.slice(0,20).forEach((m,i)=>{
+      const d=document.createElement('div'); d.className='match';
+      d.innerHTML=`<div class="idx">${String(i+1).padStart(2,'0')}</div>
+        <div class="map">${esc(mapName(m.mapId))}</div>
+        <div class="mode">${esc(m.gameMode||'')}</div>
+        <div class="date">${fmtDate(m.startedAt)}</div><div class="go">vibe-check →</div>`;
+      d.addEventListener('click',()=>openMatch(m.matchId));
+      historyEl.appendChild(d);
+    });
+  }
+
+  async function openMatch(matchId){
+    setErr(''); stepEl.textContent='Loading match…';
+    try{
+      const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}`);
+      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      show(historyEl,false); show(backRow,true); stepEl.textContent='Post-game vibe report';
+      renderResult(result);
+    }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
+  }
+
+  $('demoBtn').addEventListener('click', async ()=>{
+    setErr(''); show(historyEl,false); show(backRow,false); stepEl.textContent='Loading sample match…';
+    try{
+      const raw=await api('/api/demo');
+      const result=window.AreTheyCheating.analyzeMatch(raw,null);
+      show(backRow,true); stepEl.textContent='⚠ SAMPLE DATA — not a real match';
+      renderResult(result);
+    }catch(e){ setErr(mapErr(e)); }
+  });
+
+  $('backBtn').addEventListener('click', async ()=>{
+    show(teamsEl,false); show(summaryEl,false); show(backRow,false); stepEl.textContent='Match history:';
+    try{ const list=await api(`/api/matches/${encodeURIComponent(currentName)}/${encodeURIComponent(currentTag)}?region=${currentRegion}`); renderHistory(list.matches||[]); }
+    catch(e){ setErr(mapErr(e)); }
+  });
+
+  function renderResult(result){
+    show(teamsEl,true); show(summaryEl,true);
+    const cheaters=result.players.filter(p=>p.cheaterPct>=65).length;
+    const throwers=result.players.filter(p=>p.throwerPct>=70).length;
+    summaryEl.innerHTML=`${result.players.length} players · ${result.rounds} rounds · `+
+      `<b>${cheaters}</b> possible cheater(s) · <b>${throwers}</b> possible thrower(s). Grain of salt advised.`;
+    teamsEl.innerHTML='';
+
+    // group by team
+    const byTeam={};
+    result.players.forEach(p=>{ const t=(p.teamId||p.team||'Unknown'); (byTeam[t]=byTeam[t]||[]).push(p); });
+    const teamColors={'Blue':'#4d9fff','Red':'#ff4655'};
+    const teamNames={'Blue':'BLUE TEAM','Red':'RED TEAM'};
+    Object.keys(byTeam).forEach(team=>{
+      const players=byTeam[team];
+      const sec=document.createElement('div'); sec.className='team';
+      const color=teamColors[team]||'#8a8a8a';
+      sec.style.setProperty('--teamc',color);
+      sec.innerHTML=`<div class="team-head">
+        <span class="team-name">${teamNames[team]||esc(team)}</span>
+        <span class="team-sub">${players.length} players</span></div>`;
+      const grid=document.createElement('div'); grid.className='grid';
+      [...players].sort((a,b)=>(b.cheaterPct+b.throwerPct)-(a.cheaterPct+a.throwerPct)).forEach(p=>grid.appendChild(card(p)));
+      sec.appendChild(grid); teamsEl.appendChild(sec);
+    });
+  }
+
+  function card(p){
+    const c=document.createElement('div');
+    const flagged = p.cheaterPct>=85 || p.throwerPct>=70;
+    c.className='card'+(flagged?' flagged':'');
+    let accent=ACCENTS.FINE;
+    if(p.headline==='CHEATER VIBES') accent=ACCENTS.CHEATER;
+    else if(p.headline==='THROWER DETECTED') accent=ACCENTS.THROWER;
+    else if(p.headline==='LOOKING SUS') accent=ACCENTS.SUS;
+    c.style.setProperty('--accent',accent);
+    const reasons=[...p.cheaterReasons,...p.throwerReasons];
+    const acs = Math.round(p.scorePerRound*13)||'-';
+    c.innerHTML=`
+      ${flagged?'<div class="stamp">⚠ FLAGGED</div>':''}
+      <div class="c-head" style="--a:${accent}">${p.headline}</div>
+      <div class="c-name">${esc(p.name)}<span class="ctag">#${esc(p.tag||'???')}</span></div>
+      <div class="c-agent">${esc(p.agent||'unknown agent')}</div>
+      <div class="c-stats">
+        <div><span>K</span><b>${p.kills}</b></div>
+        <div><span>D</span><b>${p.deaths}</b></div>
+        <div><span>A</span><b>${p.assists}</b></div>
+        <div><span>HS</span><b>${Math.round(p.hsPct*100)}%</b></div>
+        <div><span>ACS</span><b>${acs}</b></div>
+      </div>
+      <div class="meter"><div class="mlab"><span>Cheating</span><b>${p.cheaterPct}%</b></div><div class="bar"><i class="cheat" style="width:${p.cheaterPct}%"></i></div></div>
+      <div class="meter"><div class="mlab"><span>Throwing</span><b>${p.throwerPct}%</b></div><div class="bar"><i class="throw" style="width:${p.throwerPct}%"></i></div></div>
+      <p class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' — '+esc(p.throwerVerdict):''}</p>
+      ${reasons.length?`<details class="reasons"><summary>Why? (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}`;
+    return c;
+  }
+</script>
+</body>
+</html>
