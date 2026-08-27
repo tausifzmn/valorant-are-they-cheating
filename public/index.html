@@ -107,7 +107,7 @@
   const $ = (id) => document.getElementById(id);
   const grid=$('grid'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backRow=$('backRow');
   const ACCENTS={CHEATER:'#ff4655',THROWER:'#5b6cff',SUS:'#f5c518',FINE:'#3ddc84'};
-  let currentPuuid=null, currentRegion='na';
+  let currentName=null, currentTag=null, currentRegion='na';
 
   function setErr(m){ errEl.textContent = m || ''; }
   function show(el,on){ el.classList.toggle('hidden', !on); }
@@ -131,9 +131,9 @@
     stepEl.textContent='Looking up '+name+'#'+tag+'…';
     try{
       const acct = await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
-      currentPuuid=acct.puuid; currentRegion=region;
+      currentName=name; currentTag=tag; currentRegion=region;
       stepEl.textContent='Found '+escapeHtml(acct.gameName)+'#'+escapeHtml(acct.tagLine)+' — loading match history…';
-      const list = await api(`/api/matches/${acct.puuid}?region=${region}`);
+      const list = await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
       renderHistory(list.matches||[]);
     }catch(e){
       stepEl.textContent='';
@@ -164,8 +164,8 @@
   async function openMatch(matchId){
     setErr(''); stepEl.textContent='Loading match…';
     try{
-      const raw = await api(`/api/match/${encodeURIComponent(matchId)}?region=${currentRegion}`);
-      const result = window.AreTheyCheating.analyzeMatch(raw, currentPuuid);
+      const raw = await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}`);
+      const result = window.AreTheyCheating.analyzeMatch(raw, null);
       show(historyEl,false); show(backRow,true);
       stepEl.textContent='Post-game vibe report 🧂';
       renderResult(result);
@@ -190,7 +190,7 @@
 
   $('backBtn').addEventListener('click', async ()=>{
     show(grid,false); show(summaryEl,false); show(backRow,false); stepEl.textContent='Match history:';
-    try{ const list=await api(`/api/matches/${currentPuuid}?region=${currentRegion}`); renderHistory(list.matches||[]); }
+    try{ const list=await api(`/api/matches/${encodeURIComponent(currentName)}/${encodeURIComponent(currentTag)}?region=${currentRegion}`); renderHistory(list.matches||[]); }
     catch(e){ setErr('Could not reload history: '+e.message); }
   });
 
