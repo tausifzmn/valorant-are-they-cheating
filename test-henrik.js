@@ -17,11 +17,11 @@ const henrikMatch = {
     ],
     players: [
       { puuid: 'p1', name: 'You', tag: 'NA1', team_id: 'Blue', character_id: 'Jett',
-        stats: { kills: 22, deaths: 14, assists: 6, score: 312, headshots: 140, bodyshots: 180, legshots: 30, damage: { dealt: 4150, received: 3100 }, first_bloods: 5 } },
+        stats: { stats: { kills: 22, deaths: 14, assists: 6, score: 312, headshots: 140, bodyshots: 180, legshots: 30, damage: { dealt: 4150, received: 3100 }, first_bloods: 5 } } },
       { puuid: 'p2', name: 'wallhack_willy', tag: 'BR1', team_id: 'Red', character_id: 'Phoenix',
-        stats: { kills: 38, deaths: 2, assists: 1, score: 470, headshots: 320, bodyshots: 95, legshots: 10, damage: { dealt: 5400, received: 900 }, first_bloods: 16 } },
+        stats: { stats: { kills: 38, deaths: 2, assists: 1, score: 470, headshots: 320, bodyshots: 95, legshots: 10, damage: { dealt: 5400, received: 900 }, first_bloods: 16 } } },
       { puuid: 'p3', name: 'afk_andy', tag: 'LAN', team_id: 'Red', character_id: 'Sage',
-        stats: { kills: 1, deaths: 22, assists: 0, score: 70, headshots: 5, bodyshots: 40, legshots: 8, damage: { dealt: 300, received: 2600 }, first_bloods: 0 } },
+        stats: { stats: { kills: 1, deaths: 22, assists: 0, score: 70, headshots: 5, bodyshots: 40, legshots: 8, damage: { dealt: 300, received: 2600 }, first_bloods: 0 } } },
     ],
   },
 };

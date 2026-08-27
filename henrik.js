@@ -1,22 +1,25 @@
 /*
  * henrik.js — normalizes HenrikDev API responses into the internal shape that
- * analysis.js already understands (a Riot-flavored { info: { players, teams } }).
- * This keeps the tested scoring engine unchanged while swapping the data source
- * from Riot's official API to HenrikDev's community API.
+ * analysis.js understands (a Riot-flavored { info: { players, teams } }).
+ * Tolerant of both flat and double-nested stats shapes (v4 nests as
+ * player.stats.stats.<field>).
  *
- * HenrikDev v4 match shape (relevant fields):
- *   { data: { players: [ { puuid, name, tag, team_id, character_id,
- *                          stats: { kills, deaths, assists, score, headshots,
- *                                   bodyshots, legshots, damage:{dealt,received},
- *                                   first_bloods? } } ],
- *            teams: [ { team_id, won, rounds_won, rounds_played } ],
- *            metadata: { map, mode, queue, game_length } } }
+ * HenrikDev endpoints used (from the official OpenAPI spec):
+ *   GET /valorant/v1/account/{name}/{tag}
+ *   GET /valorant/v3/matches/{affinity}/{name}/{tag}
+ *   GET /valorant/v4/match/{affinity}/{match_id}
  */
 
+function statObj(p) {
+  const s = p.stats || {};
+  // v4 nests the real numbers under stats.stats; fall back to flat.
+  return (s && s.stats) ? s.stats : s;
+}
+
 function normalizeMatch(raw) {
-  const root = raw && raw.data ? raw.data : (raw || {});
+  const root = (raw && raw.data) ? raw.data : (raw || {});
   const players = (root.players || []).map((p) => {
-    const s = p.stats || {};
+    const s = statObj(p);
     const dmg = s.damage || {};
     return {
       puuid: p.puuid || '',
@@ -65,11 +68,11 @@ function normalizeHistory(raw) {
 }
 
 function normalizeAccount(raw) {
-  // v1 returns { puuid, region, name, tag, account_level, ... }
+  const d = (raw && raw.data) ? raw.data : (raw || {});
   return {
-    puuid: raw.puuid || '',
-    gameName: raw.name || raw.gameName || '',
-    tagLine: raw.tag || raw.tagLine || '',
+    puuid: d.puuid || '',
+    gameName: d.name || d.gameName || '',
+    tagLine: d.tag || d.tagLine || '',
   };
 }
 
