@@ -60,8 +60,9 @@
   };
   const AGENT_MEAN_HS = 28.5;
   function agentInfo(id) {
-    if (!id) return { name: 'unknown', role: null, avgHS: AGENT_MEAN_HS };
-    return AGENTS[id] || AGENTS[String(id).toLowerCase()] || { name: String(id), role: null, avgHS: AGENT_MEAN_HS };
+    if (!id) return { name: 'unknown agent', role: null, avgHS: AGENT_MEAN_HS };
+    if (typeof id === 'object') id = id.id || id.uuid || ''; // defensively unwrap nested objects
+    return AGENTS[id] || AGENTS[String(id).toLowerCase()] || { name: 'unknown agent', role: null, avgHS: AGENT_MEAN_HS };
   }
 
   // ---- Rank baselines -----------------------------------------------
@@ -117,9 +118,13 @@
       const scorePerRound = rounds === 0 ? score : score / rounds;
       const dmgPerRound = rounds === 0 ? dmgDealt : dmgDealt / rounds;
       const ag = agentInfo(p.characterId || p.agent);
+      // Prefer a resolved name from our table; otherwise use the API's display
+      // name (if provided) so we never render a raw UUID or "[object Object]".
+      const agentName = ag.name !== 'unknown agent' ? ag.name
+        : (p.characterName || p.agentName || 'unknown agent');
       return {
         puuid: p.puuid || '', name: p.gameName || p.name || 'Unknown', tag: p.tagLine || '',
-        agent: ag.name, agentId: p.characterId || p.agent || '', agentRole: ag.role, avgHS: ag.avgHS,
+        agent: agentName, agentId: p.characterId || p.agent || '', agentRole: ag.role, avgHS: ag.avgHS,
         team: p.teamId || p.team || '', premade: !!p.premade,
         kills, deaths, assists, score, hs, bs, ls, totalShots, dmgDealt, dmgRecv, fb,
         kd, hsPct, fbRate, scorePerRound, dmgPerRound, rounds,
@@ -197,9 +202,11 @@
     if (hardPresent) pct = clamp(round(20 + H * 0.7 + vibeJitter(st.puuid + st.name)), 0, 99);
 
     // Type: what KIND of suspicion is this?
+    // Low smurf confidence (<30%) just means a regular player in their rank — no
+    // SMURF label. Only clearly-above-rank play (>=30%) earns the smurf type.
     let type = 'fine';
     if (hardPresent || pct >= 85) type = 'cheater';
-    else if (smurf >= 0.6) type = 'smurf';
+    else if (smurf >= 0.30) type = 'smurf';
     else if (pct >= 45) type = 'sus';
 
     return { pct, reasons, smurfPct: round(smurf * 100), hardPresent, type };

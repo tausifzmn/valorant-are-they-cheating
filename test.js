@@ -56,6 +56,7 @@ console.log('\n=== RANK-RELATIVE HS + SMURF (as a TYPE, not a discount) ===');
   const r = A.analyzeMatch(mk({ kills: 22, deaths: 12, headshots: 240, bodyshots: 360, legshots: 0, score: 300, damageDealt: 3200, damageReceived: 2800, firstBloods: 5, assists: 4 }, AG.jett, 24, 12), null, 12); // Gold, ~40% HS
   const p = r.players[0];
   check('Gold 40%HS player: smurf high (>=50)', p.smurfPct >= 50, 'smurf=' + p.smurfPct);
+  check('Gold 40%HS player: type SMURF (>=30 conf)', p.cheaterType === 'smurf', 'type=' + p.cheaterType);
   check('Gold 40%HS player: cheater bar is HONEST (>=50, NOT suppressed by smurf)', p.cheaterPct >= 50, 'cheat=' + p.cheaterPct);
   check('Gold 40%HS player: NO hard tells -> type SMURF not CHEATER', p.cheaterType === 'smurf', 'type=' + p.cheaterType);
   check('Gold 40%HS player: not hard_present', !p.cheaterHardPresent, 'hard=' + p.cheaterHardPresent);
@@ -75,6 +76,13 @@ console.log('\n=== RANK-RELATIVE HS + SMURF (as a TYPE, not a discount) ===');
   check('63%HS: type is CHEATER (hard tell, not smurf)', p.cheaterType === 'cheater', 'type=' + p.cheaterType);
 }
 
+
+// Low smurf confidence (<30%) => regular player, NOT labeled smurf
+{
+  const r = A.analyzeMatch(mk({ kills: 20, deaths: 18, headshots: 60, bodyshots: 240, legshots: 0, score: 260, damageDealt: 2400, damageReceived: 2400, firstBloods: 4, assists: 4 }, AG.jett, 24, 12), null, 12);
+  const p = r.players[0];
+  check('Slightly-above-rank Gold: low smurf (<30) -> NOT labeled smurf', p.cheaterType !== 'smurf', 'type=' + p.cheaterType + ' smurf=' + p.smurfPct);
+}
 console.log('\n=== THROWER vs JUST-BAD + RANK FACTOR ===');
 {
   const r = A.analyzeMatch(mk({ kills: 8, deaths: 22, headshots: 12, bodyshots: 160, legshots: 0, score: 90, damageDealt: 1100, damageReceived: 4000, firstBloods: 2, assists: 1 }, AG.chamber, 24, 3), null, 3); // Iron

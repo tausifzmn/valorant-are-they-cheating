@@ -21,11 +21,22 @@ function normalizeMatch(raw) {
   const players = (root.players || []).map((p) => {
     const s = statObj(p);
     const dmg = s.damage || {};
+    // HenrikDev v4 nests the character as an OBJECT {id, name} OR a string id.
+    // Pull the UUID string out of whichever shape we get, and keep the display
+    // name so we can label the agent even if the UUID isn't in our table.
+    const charRaw = p.character_id || p.character || p.agent || p.agent_id || '';
+    const characterId = (charRaw && typeof charRaw === 'object')
+      ? (charRaw.id || charRaw.uuid || charRaw.characterId || '')
+      : (charRaw || '');
+    const characterName = (charRaw && typeof charRaw === 'object')
+      ? (charRaw.name || charRaw.displayName || '')
+      : '';
     return {
       puuid: p.puuid || '',
       gameName: p.name || 'Unknown',
       tagLine: p.tag || '',
-      characterId: p.character_id || p.agent || p.character || '',
+      characterId: characterId,
+      characterName: characterName,
       teamId: p.team_id || '',
       premade: false,
       stats: {
