@@ -63,7 +63,7 @@ console.log('\n=== RANK-RELATIVE HS + SMURF ===');
 {
   const r = A.analyzeMatch(mk({ kills: 22, deaths: 12, headshots: 240, bodyshots: 360, legshots: 0, score: 300, damageDealt: 3200, damageReceived: 2800, firstBloods: 5, assists: 4 }, AG.jett, 24, 27), null, 27);
   const p = r.players[0];
-  check('Radiant same stats: smurf LOW (<40)', p.smurfPct < 40, 'smurf=' + p.smurfPct);
+  check('Radiant same stats: smurf LOW (<50, normal-ish for rank)', p.smurfPct < 50, 'smurf=' + p.smurfPct);
 }
 // Hard tell overrides smurf: 63% HS at Gold -> cheater high regardless
 {

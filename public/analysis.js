@@ -197,30 +197,26 @@
   }
 
   // ---- SMURF score --------------------------------------------------
-  // Stats several tiers above the player's OWN rank = smurf (shifted-up normal).
-  // 60%+ HS / 0-death / FB-every-round = still cheater (handled in cheater hard layer).
+  // A smurf is someone playing CLEARLY ABOVE the average player in THEIR OWN
+  // rank — i.e. their HS% / ACS sit several tiers above their rank's median.
+  // KD is NOT used: KD median is flat (~1.0) across all ranks, so a normal
+  // positive-KD player would falsely imply "top tier". We measure deviation
+  // from the player's own rank baseline, in rank-tier units.
   function smurfScore(st, rankTierId) {
     const rank = rankById(rankTierId || 0);
-    // implied tier for each stat by inverse-lookup vs rank medians
-    const impliedTier = (val, key) => {
-      let lo = RANKS[0], hi = RANKS[RANKS.length - 1];
-      const arr = [...RANKS].sort((a, b) => a[key] - b[key]);
-      for (let i = 0; i < arr.length - 1; i++) {
-        if (val >= arr[i][key] && val <= arr[i + 1][key]) { lo = arr[i]; hi = arr[i + 1]; break; }
-        if (val > arr[arr.length - 1][key]) { lo = hi = arr[arr.length - 1]; }
-      }
-      const t = arr.findIndex((x) => x === lo);
-      const span = Math.max(1e-6, hi[key] - lo[key]);
-      const frac = clamp((val - lo[key]) / span, 0, 1);
-      return Math.max(0, Math.min(8, t + frac));
-    };
     const myTier = Math.max(0, Math.min(8, rankIndex(rankTierId)));
-    const gHS = impliedTier(st.hsPct * 100, 'hs') - myTier;
-    const gACS = impliedTier(st.scorePerRound * 13, 'acs') - myTier; // rough ACS proxy
-    const gKD = impliedTier(st.kd, 'kd') - myTier;
-    let S = 0.30 * Math.max(0, gHS) + 0.35 * Math.max(0, gACS) + 0.20 * Math.max(0, gKD);
-    S = clamp(S, 0, 6);
-    const smurf = sigmoid((S - 1.2) / 1.1);
+    // Ladder spacing per single TIER (3 tiers = 1 rank division).
+    const hsStep = (RANKS[RANKS.length - 1].hs - RANKS[0].hs) / (RANKS.length - 2);
+    const acsStep = (RANKS[RANKS.length - 1].acs - RANKS[0].acs) / (RANKS.length - 2);
+    // Deviation from the player's OWN rank median, expressed in RANK DIVISIONS
+    // (1 division = 3 tiers). A smurf plays like they belong ~1+ division above.
+    // One good match is NOT proof (Riot stresses career patterns) — so we only
+    // flag clearly-above-rank play and keep the ceiling modest for a single game.
+    const gHS = (st.hsPct * 100 - rank.hs) / hsStep / 3;
+    const gACS = (st.scorePerRound * 13 - rank.acs) / acsStep / 3;
+    const S = 0.55 * Math.max(0, gHS) + 0.45 * Math.max(0, gACS);
+    // Need ~1.5 divisions above own rank to register; ~2.2 div above -> ~50% smurf.
+    const smurf = clamp(sigmoid((S - 1.5) / 0.7) * 0.85, 0, 0.95);
     return clamp(smurf, 0, 1);
   }
   function rankIndex(id) {
