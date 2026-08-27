@@ -1,0 +1,20 @@
+{
+  "info": {
+    "teams": [
+      { "teamId": "Blue", "roundsPlayed": 24, "roundsWon": 13 },
+      { "teamId": "Red", "roundsPlayed": 24, "roundsWon": 11 }
+    ],
+    "players": [
+      { "puuid": "ME000000000000000000000000000000", "gameName": "You", "tagLine": "NA1", "teamId": "Blue", "characterId": "Jett", "stats": { "kills": 22, "deaths": 14, "assists": 6, "score": 312, "headshots": 140, "bodyshots": 180, "legshots": 30, "damageDealt": 4150, "damageReceived": 3100, "firstBloods": 5 } },
+      { "puuid": "F0011111111111111111111111111111", "gameName": "AimGod99", "tagLine": "EUW", "teamId": "Blue", "characterId": "Reyna", "stats": { "kills": 26, "deaths": 10, "assists": 3, "score": 320, "headshots": 150, "bodyshots": 160, "legshots": 20, "damageDealt": 3980, "damageReceived": 2600, "firstBloods": 7 } },
+      { "puuid": "F0022222222222222222222222222222", "gameName": "sweatlord", "tagLine": "NA2", "teamId": "Blue", "characterId": "Raze", "stats": { "kills": 18, "deaths": 16, "assists": 4, "score": 240, "headshots": 90, "bodyshots": 200, "legshots": 25, "damageDealt": 3300, "damageReceived": 3400, "firstBloods": 3 } },
+      { "puuid": "F0033333333333333333333333333333", "gameName": "IGotThis", "tagLine": "NA3", "teamId": "Blue", "characterId": "Sova", "stats": { "kills": 14, "deaths": 18, "assists": 9, "score": 210, "headshots": 70, "bodyshots": 150, "legshots": 20, "damageDealt": 2800, "damageReceived": 3200, "firstBloods": 2 } },
+      { "puuid": "E0044444444444444444444444444444", "gameName": "wallhack_willy", "tagLine": "BR1", "teamId": "Red", "characterId": "Phoenix", "stats": { "kills": 38, "deaths": 2, "assists": 1, "score": 470, "headshots": 320, "bodyshots": 95, "legshots": 10, "damageDealt": 5400, "damageReceived": 900, "firstBloods": 16 } },
+      { "puuid": "E0055555555555555555555555555555", "gameName": "headshot_hannah", "tagLine": "KR", "teamId": "Red", "characterId": "Chamber", "stats": { "kills": 31, "deaths": 9, "assists": 2, "score": 360, "headshots": 280, "bodyshots": 110, "legshots": 12, "damageDealt": 4200, "damageReceived": 2100, "firstBloods": 9 } },
+      { "puuid": "E0066666666666666666666666666666", "gameName": "sus_sam", "tagLine": "OCE", "teamId": "Red", "characterId": "Killjoy", "stats": { "kills": 24, "deaths": 12, "assists": 5, "score": 290, "headshots": 160, "bodyshots": 170, "legshots": 22, "damageDealt": 3500, "damageReceived": 2700, "firstBloods": 6 } },
+      { "puuid": "E0077777777777777777777777777777", "gameName": "bronze_bob", "tagLine": "NA9", "teamId": "Red", "characterId": "Yoru", "stats": { "kills": 2, "deaths": 28, "assists": 1, "score": 95, "headshots": 12, "bodyshots": 80, "legshots": 20, "damageDealt": 620, "damageReceived": 3900, "firstBloods": 0 } },
+      { "puuid": "E0088888888888888888888888888888", "gameName": "afk_andy", "tagLine": "LAN", "teamId": "Red", "characterId": "Sage", "stats": { "kills": 1, "deaths": 22, "assists": 0, "score": 70, "headshots": 5, "bodyshots": 40, "legshots": 8, "damageDealt": 300, "damageReceived": 2600, "firstBloods": 0 } },
+      { "puuid": "E0099999999999999999999999999999", "gameName": "mid_mike", "tagLine": "NA7", "teamId": "Red", "characterId": "Omen", "stats": { "kills": 15, "deaths": 17, "assists": 4, "score": 200, "headshots": 80, "bodyshots": 160, "legshots": 18, "damageDealt": 2600, "damageReceived": 3000, "firstBloods": 3 } }
+    ]
+  }
+}
