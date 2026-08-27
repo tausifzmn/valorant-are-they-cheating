@@ -28,7 +28,7 @@ const AG = {
 console.log('\n=== CHEATER: HS% band + kills-gate ===');
 {
   const r = A.analyzeMatch(mk({ kills: 24, deaths: 14, headshots: 270, bodyshots: 405, legshots: 0, score: 420, damageDealt: 3500, damageReceived: 3000, firstBloods: 6, assists: 5 }, AG.jett, 24, 27), null, 27); // Radiant
-  check('Radiant-Jett 40% HS reads LOW (cheat<35)', r.players[0].cheaterPct < 35, 'cheat=' + r.players[0].cheaterPct);
+  check('Radiant-Jett 40% HS reads LOW-MODERATE (<45, 40% is only slightly above Radiant norm)', r.players[0].cheaterPct < 45, 'cheat=' + r.players[0].cheaterPct);
 }
 {
   const r = A.analyzeMatch(mk({ kills: 22, deaths: 10, headshots: 406, bodyshots: 294, legshots: 0, score: 480, damageDealt: 4200, damageReceived: 2500, firstBloods: 8, assists: 4 }, AG.raze, 24, 12), null, 12); // Gold
@@ -50,27 +50,29 @@ console.log('\n=== CHEATER: HS% band + kills-gate ===');
   check('Flawless on 12-round game does NOT read 99', r.players[0].cheaterPct < 99, 'cheat=' + r.players[0].cheaterPct);
 }
 
-console.log('\n=== RANK-RELATIVE HS + SMURF ===');
-// Gold player with Platinum/Diamond-level stats -> high smurf%, cheater soft-discounted (low)
+console.log('\n=== RANK-RELATIVE HS + SMURF (as a TYPE, not a discount) ===');
+// Gold player with above-rank stats -> bar is legitimately HIGH, but classified SMURF (not cheater)
 {
   const r = A.analyzeMatch(mk({ kills: 22, deaths: 12, headshots: 240, bodyshots: 360, legshots: 0, score: 300, damageDealt: 3200, damageReceived: 2800, firstBloods: 5, assists: 4 }, AG.jett, 24, 12), null, 12); // Gold, ~40% HS
   const p = r.players[0];
   check('Gold 40%HS player: smurf high (>=50)', p.smurfPct >= 50, 'smurf=' + p.smurfPct);
-  check('Gold 40%HS player: cheater stays LOW (smurf discounts soft)', p.cheaterPct < 40, 'cheat=' + p.cheaterPct);
-  check('Gold 40%HS player: not hard_present', p.cheaterPct < 85);
+  check('Gold 40%HS player: cheater bar is HONEST (>=50, NOT suppressed by smurf)', p.cheaterPct >= 50, 'cheat=' + p.cheaterPct);
+  check('Gold 40%HS player: NO hard tells -> type SMURF not CHEATER', p.cheaterType === 'smurf', 'type=' + p.cheaterType);
+  check('Gold 40%HS player: not hard_present', !p.cheaterHardPresent, 'hard=' + p.cheaterHardPresent);
 }
-// SAME stats at Radiant -> smurf low (normal for rank), cheater low
+// SAME stats at Radiant -> smurf low (normal for rank), cheater low, type fine/sus
 {
   const r = A.analyzeMatch(mk({ kills: 22, deaths: 12, headshots: 240, bodyshots: 360, legshots: 0, score: 300, damageDealt: 3200, damageReceived: 2800, firstBloods: 5, assists: 4 }, AG.jett, 24, 27), null, 27);
   const p = r.players[0];
   check('Radiant same stats: smurf LOW (<50, normal-ish for rank)', p.smurfPct < 50, 'smurf=' + p.smurfPct);
+  check('Radiant same stats: cheater low (<45, 40%HS is normal at Radiant)', p.cheaterPct < 45, 'cheat=' + p.cheaterPct);
 }
-// Hard tell overrides smurf: 63% HS at Gold -> cheater high regardless
+// Hard tell overrides smurf: 63% HS at Gold -> cheater high + type CHEATER
 {
   const r = A.analyzeMatch(mk({ kills: 24, deaths: 0, headshots: 300, bodyshots: 180, legshots: 0, score: 500, damageDealt: 6000, damageReceived: 400, firstBloods: 18, assists: 2 }, AG.raze, 24, 12), null, 12);
   const p = r.players[0];
   check('63%HS 0-death at Gold: cheater HIGH (hard tell wins over smurf)', p.cheaterPct >= 70, 'cheat=' + p.cheaterPct);
-  check('63%HS: hard_present true', true);
+  check('63%HS: type is CHEATER (hard tell, not smurf)', p.cheaterType === 'cheater', 'type=' + p.cheaterType);
 }
 
 console.log('\n=== THROWER vs JUST-BAD + RANK FACTOR ===');

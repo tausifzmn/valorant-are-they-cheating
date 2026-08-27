@@ -187,13 +187,22 @@
     H = clamp(H + hardExtra, 0, 100);
     const hardPresent = H > 40;
 
-    // SMURF modulation: soft certainty discounted if likely a smurf (but HARD never discounted)
+    // SMURF is NOT a separate discount on cheater% — it's a LABEL for the same
+    // suspicion (playing clearly above your own rank, no hard tells). The cheater
+    // % stays honest; smurf just re-classifies *why* the bar is high.
     const smurf = smurfScore(st, rankTierId);
-    const smurfMod = hardPresent ? 0.3 : (1 - 0.8 * smurf);
-    let pct = clamp(round(5 + S * smurfMod + (hardPresent ? H * 0.6 : 0) + vibeJitter(st.puuid + st.name)), 0, 99);
+
+    // cheater %: HARD tells + SOFT rank-relative HS, with NO smurf suppression.
+    let pct = clamp(round(5 + S + (hardPresent ? H * 0.6 : 0) + vibeJitter(st.puuid + st.name)), 0, 99);
     if (hardPresent) pct = clamp(round(20 + H * 0.7 + vibeJitter(st.puuid + st.name)), 0, 99);
 
-    return { pct, reasons, smurfPct: round(smurf * 100), hardPresent };
+    // Type: what KIND of suspicion is this?
+    let type = 'fine';
+    if (hardPresent || pct >= 85) type = 'cheater';
+    else if (smurf >= 0.6) type = 'smurf';
+    else if (pct >= 45) type = 'sus';
+
+    return { pct, reasons, smurfPct: round(smurf * 100), hardPresent, type };
   }
 
   // ---- SMURF score --------------------------------------------------
@@ -276,6 +285,7 @@
   function headline(st, c, t) {
     if (t.label === 'THROWER' || t.pct >= 70) return 'THROWER DETECTED';
     if (c.hardPresent || c.pct >= 85) return 'CHEATER VIBES';
+    if (c.type === 'smurf') return 'SMURF VIBES';
     if (c.pct >= 45) return 'LOOKING SUS';
     return 'PROBABLY FINE';
   }
@@ -290,6 +300,7 @@
       return {
         ...st, rankTierName: rank.name,
         cheaterPct: c.pct, throwerPct: t.pct, smurfPct: c.smurfPct,
+        cheaterType: c.type, cheaterHardPresent: c.hardPresent,
         cheaterReasons: c.reasons, throwerReasons: t.reasons,
         throwerLabel: t.label,
         cheaterVerdict: cheaterVerdict(c.pct),

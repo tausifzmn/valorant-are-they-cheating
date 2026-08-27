@@ -254,9 +254,8 @@
       <div class="c-agent">${esc(p.agent||'unknown agent')}</div>
       <div class="c-line"><span>K <b>${p.kills}</b></span><span>D <b>${p.deaths}</b></span><span>A <b>${p.assists}</b></span>
         <span class="hs">HS <b>${Math.round(p.hsPct*100)}%</b></span><span>ACS <b>${Math.round(p.scorePerRound*13)||'-'}</b></span></div>
-      <div class="meter"><div class="lab"><span>🤖 Cheating</span><b>${p.cheaterPct}%</b></div><div class="bar cheat"><i style="width:${p.cheaterPct}%"></i></div></div>
+      <div class="meter"><div class="lab"><span>${p.cheaterType==='smurf'?'🕹️ Smurf':'🤖 Cheating'}</span><b>${p.cheaterPct}%</b></div><div class="bar ${p.cheaterType==='smurf'?'smurf':'cheat'}"><i style="width:${p.cheaterPct}%"></i></div></div>
       <div class="meter"><div class="lab"><span>🎭 Throwing</span><b>${p.throwerPct}%</b></div><div class="bar throw"><i style="width:${p.throwerPct}%"></i></div></div>
-      <div class="meter"><div class="lab"><span>🕹️ Smurf</span><b>${p.smurfPct}%</b></div><div class="bar smurf"><i style="width:${p.smurfPct}%"></i></div></div>
       <div class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' · '+esc(p.throwerVerdict):''}</div>
       ${reasons.length?`<details class="reasons"><summary>why the vibes say so (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:'<div class="reasons" style="border:none;padding:0"></div>'}`;
     return c;

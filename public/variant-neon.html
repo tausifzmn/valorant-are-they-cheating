@@ -390,8 +390,6 @@
     const throwers=result.players.filter(p=>p.throwerPct>=70).length;
     const smurfs=result.players.filter(p=>p.smurfPct>=60).length;
     const rankCtx=result.rank&&result.rank!=='Unknown'&&result.rank!=='Unranked'?(' · rank: '+result.rank):'';
-    const smurfs=result.players.filter(p=>p.smurfPct>=60).length;
-    const rankCtx=result.rank&&result.rank!=='Unknown'&&result.rank!=='Unranked'?(' · rank: '+result.rank):'';
     summaryEl.innerHTML=`${result.players.length} operatives · ${result.rounds} rounds · `+
       `<b class="ch">${cheaters}</b> possible cheater(s) · <b class="th">${throwers}</b> possible thrower(s) · <b class="sm">${smurfs}</b> smurf(s)${rankCtx}. Grain of salt advised. 🧂`;
     teamsEl.innerHTML='';
@@ -428,9 +426,8 @@
       <div class="c-agent"><span class="ico">◈</span> ${esc(p.agent||'unknown agent')}</div>
       <div class="c-line"><span>K <b>${p.kills}</b></span><span>D <b>${p.deaths}</b></span><span>A <b>${p.assists}</b></span>
         <span class="hs">HS <b>${Math.round(p.hsPct*100)}%</b></span><span class="acs">ACS <b>${Math.round(p.scorePerRound)}</b></span></div>
-      <div class="meter"><div class="lab"><span class="k">🤖 Cheating</span><b>${p.cheaterPct}%</b></div><div class="bar cheat"><i style="width:${p.cheaterPct}%"></i></div></div>
-      <div class="meter"><div class="lab"><span class="k">🎭 Throwing</span><b>${p.throwerPct}%</b></div><div class="bar throw"><i style="width:${p.throwerPct}%"></i></div></div>
-      <div class="meter"><div class="lab"><span class="k">🕹️ Smurf</span><b>${p.smurfPct}%</b></div><div class="bar smurf"><i style="width:${p.smurfPct}%"></i></div></div>></i></div></div>
+      <div class="meter"><div class="lab"><span class="k">${p.cheaterType==='smurf'?'🕹️ Smurf':'🤖 Cheating'}</span><b>${p.cheaterPct}%</b></div><div class="bar ${p.cheaterType==='smurf'?'smurf':'cheat'}"><i style="width:${p.cheaterPct}%"></i></div></div>
+      <div class="meter"><div class="lab"><span class="k">🎭 Throwing</span><b>${p.throwerPct}%</b></div><div class="bar throw"><i style="width:${p.throwerPct}%"></i></div></div>></i></div></div>
       <div class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' · '+esc(p.throwerVerdict):''}</div>
       ${reasons.length?`<details class="reasons"><summary>why the vibes say so (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}`;
     return c;

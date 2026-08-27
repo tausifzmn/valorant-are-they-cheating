@@ -355,8 +355,8 @@
         <span>ACS <b>${Math.round(p.scorePerRound*13)||'-'}</b></span>
       </div>
       <div class="meter">
-        <div class="meter-row"><span>Cheating</span><b>${p.cheaterPct}%</b></div>
-        <div class="track"><div class="fill cheat" data-w="${p.cheaterPct}"></div></div>
+        <div class="meter-row"><span>${p.cheaterType==='smurf'?'Smurf':'Cheating'}</span><b>${p.cheaterPct}%</b></div>
+        <div class="track"><div class="fill ${p.cheaterType==='smurf'?'smurf':'cheat'}" data-w="${p.cheaterPct}"></div></div>
       </div>
       <div class="meter">
         <div class="meter-row"><span>Throwing</span><b>${p.throwerPct}%</b></div>
