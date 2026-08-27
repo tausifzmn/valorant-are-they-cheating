@@ -324,9 +324,8 @@
         <div><span>HS</span><b>${Math.round(p.hsPct*100)}%</b></div>
         <div><span>ACS</span><b>${acs}</b></div>
       </div>
-      <div class="meter"><div class="mlab"><span>${p.cheaterType==='smurf'?'SMURF':'CHEATING'}</span><b>${p.cheaterPct}%</b></div><div class="bar"><i class="${p.cheaterType==='smurf'?'smurf':'cheat'}" style="width:${p.cheaterPct}%"></i></div></div>
-      <div class="meter"><div class="mlab"><span>Throwing</span><b>${p.throwerPct}%</b></div><div class="bar"><i class="throw" style="width:${p.throwerPct}%"></i></div></div>
-      <div class="meter"><div class="mlab"><span>Smurf</span><b>${p.smurfPct}%</b></div><div class="bar"><i class="smurf" style="width:${p.smurfPct}%"></i></div></div>
+      ${p.cheaterPct>0?`<div class="meter"><div class="mlab"><span>${p.cheaterType==='smurf'?'SMURF':'CHEATING'}</span><b>${p.cheaterPct}%</b></div><div class="bar"><i class="${p.cheaterType==='smurf'?'smurf':'cheat'}" style="width:${p.cheaterPct}%"></i></div></div>`:''}
+      ${p.throwerPct>0?`<div class="meter"><div class="mlab"><span>Throwing</span><b>${p.throwerPct}%</b></div><div class="bar"><i class="throw" style="width:${p.throwerPct}%"></i></div></div>`:''}
       <p class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' — '+esc(p.throwerVerdict):''}</p>
       ${reasons.length?`<details class="reasons"><summary>Why? (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}`;
     return c;

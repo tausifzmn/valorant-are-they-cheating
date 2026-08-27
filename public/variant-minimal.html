@@ -354,16 +354,14 @@
         <span class="hs">HS <b>${Math.round(p.hsPct*100)}%</b></span>
         <span>ACS <b>${Math.round(p.scorePerRound*13)||'-'}</b></span>
       </div>
-      <div class="meter">
+      ${p.cheaterPct>0?`<div class="meter">
         <div class="meter-row"><span>${p.cheaterType==='smurf'?'Smurf':'Cheating'}</span><b>${p.cheaterPct}%</b></div>
         <div class="track"><div class="fill ${p.cheaterType==='smurf'?'smurf':'cheat'}" data-w="${p.cheaterPct}"></div></div>
-      </div>
-      <div class="meter">
+      </div>`:''}
+      ${p.throwerPct>0?`<div class="meter">
         <div class="meter-row"><span>Throwing</span><b>${p.throwerPct}%</b></div>
         <div class="track"><div class="fill throw" data-w="${p.throwerPct}"></div></div>
-        <div class="meter-row"><span>Smurf</span><b>${p.smurfPct}%</b></div>
-        <div class="track"><div class="fill smurf" data-w="${p.smurfPct}"></div></div>
-      </div>
+      </div>`:''}
       ${verdictHtml?`<div class="verdict">${verdictHtml}</div>`:''}
       ${reasons.length?`<details class="reasons"><summary>Why the vibes say so (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}
     `;
