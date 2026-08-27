@@ -80,11 +80,6 @@ app.get('/api/match/:region/:id', async (req, res) => {
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 
-// Demo match (no key needed) — clearly labeled "SAMPLE DATA" in the UI.
-app.get('/api/demo', (req, res) => {
-  res.json(require('./demo-match.json'));
-});
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 if (require.main === module) {

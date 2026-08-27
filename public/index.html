@@ -36,7 +36,7 @@
   button:active{transform:translateY(1px)}
   .primary{background:var(--red);color:#fff} .primary:hover{filter:brightness(1.08)}
   .ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)} .ghost:hover{border-color:var(--red)}
-  .row{display:flex;gap:10px;justify-content:center;margin:10px 0 6px}
+  .hidden{display:none}
   .hint{color:var(--faint);text-align:center;font-size:12px;margin-bottom:14px}
   .err{color:var(--red);text-align:center;min-height:18px;margin:4px 0;font-size:13px}
   .step{font-size:13px;color:var(--muted);text-align:center;margin:8px 0}
@@ -114,15 +114,12 @@
       <option value="latam">LATAM</option><option value="br">BR</option>
     </select>
     <button class="primary" id="searchBtn">🔍 Search</button>
-  </div>
-  <div class="row">
-    <button class="ghost" id="demoBtn">🎲 Sample match (no key)</button>
+    <button class="ghost hidden" id="backBtn">← Match history</button>
   </div>
   <div class="hint">e.g. <code>TenZ#NA1</code> — name and tag are separate fields.</div>
 
   <div class="err" id="err"></div>
   <div class="step" id="step"></div>
-  <div class="back hidden" id="backRow"><button class="ghost" id="backBtn">← Match history</button></div>
   <div class="history hidden" id="history"></div>
   <div class="summary hidden" id="summary"></div>
   <div id="teams"></div>
@@ -133,7 +130,7 @@
 <script src="/analysis.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
-  const teamsEl=$('teams'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backRow=$('backRow');
+  const teamsEl=$('teams'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backBtn=$('backBtn');
   const ACCENTS={CHEATER:'#ff4655',THROWER:'#23e0c4',SUS:'#f5c518',FINE:'#3ddc84'};
   let currentName=null, currentTag=null, currentRegion='na', currentTier=0;
 
@@ -151,7 +148,7 @@
 
   $('searchBtn').addEventListener('click', async ()=>{
     const name=$('name').value.trim(), tag=$('tag').value.trim().replace(/^#/,''), region=$('region').value;
-    setErr(''); show(teamsEl,false); show(summaryEl,false); show(historyEl,false); show(backRow,false);
+    setErr(''); show(teamsEl,false); show(summaryEl,false); show(historyEl,false); show(backBtn,false);
     if(!name||!tag){ setErr('Enter both a game name and tag.'); return; }
     stepEl.textContent='Looking up '+name+'#'+tag+'…';
     try{
@@ -171,7 +168,7 @@
   }
 
   function renderHistory(matches){
-    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backRow,false);
+    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backBtn,false);
     historyEl.innerHTML='';
     if(!matches.length){ stepEl.textContent='No recent matches found.'; return; }
     stepEl.textContent='Match history — click one to vibe-check the lobby:';
@@ -190,23 +187,13 @@
     try{
       const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}?rank=${currentTier}`);
       const result=window.AreTheyCheating.analyzeMatch(raw,null,currentTier);
-      show(historyEl,false); show(backRow,true); stepEl.textContent='Post-game vibe report 🧂';
+      show(historyEl,false); show(backBtn,true); stepEl.textContent='Post-game vibe report 🧂';
       renderResult(result);
     }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
   }
 
-  $('demoBtn').addEventListener('click', async ()=>{
-    setErr(''); show(historyEl,false); show(backRow,false); stepEl.textContent='Loading sample match…';
-    try{
-      const raw=await api('/api/demo');
-      const result=window.AreTheyCheating.analyzeMatch(raw,null,0);
-      show(backRow,true); stepEl.textContent='⚠️ SAMPLE DATA — not a real match';
-      renderResult(result);
-    }catch(e){ setErr(mapErr(e)); }
-  });
-
   $('backBtn').addEventListener('click', async ()=>{
-    show(teamsEl,false); show(summaryEl,false); show(backRow,false); stepEl.textContent='Match history:';
+    show(teamsEl,false); show(summaryEl,false); show(backBtn,false); stepEl.textContent='Match history:';
     try{ const list=await api(`/api/matches/${encodeURIComponent(currentName)}/${encodeURIComponent(currentTag)}?region=${currentRegion}`); renderHistory(list.matches||[]); }
     catch(e){ setErr(mapErr(e)); }
   });
