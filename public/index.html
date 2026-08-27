@@ -98,7 +98,7 @@
   <div class="grid" id="grid"></div>
 
   <footer>
-    Built for post-game salt. Data via Riot's <code>val-match-v1</code>. Runs on a tiny backend so your API key stays secret. 🔒
+    Built for post-game salt. Data via the HenrikDev Valorant API. Runs on a tiny backend so your API key stays secret. 🔒
   </footer>
 </div>
 
@@ -113,7 +113,10 @@
   function show(el,on){ el.classList.toggle('hidden', !on); }
 
   function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function fmtDate(ms){ if(!ms) return ''; const d=new Date(Number(ms)); return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+  function fmtDate(ms){ if(!ms) return ''; let n=Number(ms);
+    // HenrikDev game_start is seconds; guard against both seconds and ms.
+    if (n < 1e12) n = n * 1000;
+    const d=new Date(n); return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
   function mapName(id){ return (id||'').replace('{/Game/Maps/','').replace(/.*\//,'').replace('_',' ').trim() || 'Unknown map'; }
 
   async function api(path){

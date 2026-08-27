@@ -42,10 +42,11 @@ check(you.cheaterPct < 60 && you.throwerPct < 60, 'you should be clean-ish');
 
 // history normalizer
 const hist = henrik.normalizeHistory({ data: [
-  { metadata: { match_id: 'abc', mode: 'Competitive', map: 'Ascent', game_start: 1700000000000 } },
-  { metadata: { match_id: 'def', mode: 'Competitive', map: 'Bind', game_start: 1700001000000 } },
+  { metadata: { matchid: 'abc', mode: 'Competitive', map: 'Ascent', game_start: 1700000000 } },
+  { metadata: { matchid: 'def', mode: 'Competitive', map: 'Bind', game_start: 1700001000 } },
 ] });
 check(hist.matches.length === 2 && hist.matches[0].matchId === 'abc', 'history normalized');
+check(hist.matches[0].startedAt === 1700000000000, 'game_start seconds -> ms');
 
 // account normalizer
 const acc = henrik.normalizeAccount({ puuid: 'xyz', name: 'tofu', tag: 'ugly' });

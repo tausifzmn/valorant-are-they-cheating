@@ -57,11 +57,13 @@ function normalizeHistory(raw) {
   return {
     matches: list.slice(0, 20).map((m) => {
       const meta = m.metadata || {};
+      // HenrikDev uses `metadata.matchid` (no underscore). game_start is in SECONDS.
+      const rawStart = meta.game_start || meta.gameStart || 0;
       return {
-        matchId: meta.match_id || meta.matchId || '',
+        matchId: meta.matchid || meta.match_id || meta.matchId || '',
         gameMode: meta.mode || meta.queue || '',
         mapId: meta.map || '',
-        startedAt: meta.game_start || meta.gameStart || 0,
+        startedAt: rawStart ? Number(rawStart) * 1000 : 0,
       };
     }),
   };
