@@ -340,7 +340,7 @@
         <span>D <b>${p.deaths}</b></span>
         <span>A <b>${p.assists}</b></span>
         <span class="hs">HS <b>${Math.round(p.hsPct*100)}%</b></span>
-        <span>ACS <b>${Math.round(p.scorePerRound*13)||'-'}</b></span>
+        <span>ACS <b>${Math.round(p.acs)||'-'}</b></span>
       </div>
       ${p.cheaterPct>0?`<div class="meter">
         <div class="meter-row"><span>${p.cheaterType==='smurf'?'Smurf':'Cheating'}</span><b>${p.cheaterPct}%</b></div>

@@ -299,7 +299,7 @@
     else if(p.headline==='LOOKING SUS') accent=ACCENTS.SUS;
     c.style.setProperty('--accent',accent);
     const reasons=[...p.cheaterReasons,...p.throwerReasons];
-    const acs = Math.round(p.scorePerRound*13)||'-';
+    const acs = Math.round(p.acs)||'-';
     c.innerHTML=`
       ${flagged?'<div class="stamp">⚠ FLAGGED</div>':''}
       <div class="c-head" style="--a:${accent}">${p.headline}</div>

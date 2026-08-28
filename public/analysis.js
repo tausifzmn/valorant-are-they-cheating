@@ -112,7 +112,12 @@
     const players = info.players || [];
     const teams = info.teams || [];
     if (!players.length) throw new Error('Match has no players.');
-    const rounds = (teams[0] && teams[0].roundsPlayed) || 0;
+    // Total rounds in the match. Live v4 data doesn't always populate
+    // roundsPlayed, so fall back to the sum of both teams' rounds_won
+    // (a completed match's total rounds = team1.won + team2.won).
+    const roundsPlayed = (teams[0] && teams[0].roundsPlayed) || 0;
+    const roundsWonSum = teams.reduce((a, t) => a + ((t.roundsWon) || 0), 0);
+    const rounds = roundsPlayed || roundsWonSum || 24;
 
     const list = players.map((p) => {
       const s = p.stats || {};
@@ -126,6 +131,10 @@
       const fbRate = rounds === 0 ? 0 : fb / rounds;
       const scorePerRound = rounds === 0 ? score : score / rounds;
       const dmgPerRound = rounds === 0 ? dmgDealt : dmgDealt / rounds;
+      // ACS = Average Combat Score = Riot's "score" divided by rounds played.
+      // The API's `score` is the WHOLE-MATCH total (typically ~5k-9k), so real
+      // ACS is ~150-320. Do NOT multiply by 13 (that produced the bogus 98540).
+      const acs = scorePerRound;
       const ag = agentInfo(p.characterId || p.agent);
       // Prefer a resolved name from our table; otherwise use the API's display
       // name (if provided) so we never render a raw UUID or "[object Object]".
@@ -136,7 +145,7 @@
         agent: agentName, agentId: p.characterId || p.agent || '', agentRole: ag.role, avgHS: ag.avgHS,
         team: p.teamId || p.team || '', premade: !!p.premade,
         kills, deaths, assists, score, hs, bs, ls, totalShots, dmgDealt, dmgRecv, fb,
-        kd, hsPct, fbRate, scorePerRound, dmgPerRound, rounds,
+        kd, hsPct, fbRate, scorePerRound, acs, dmgPerRound, rounds,
       };
     });
     return { rounds, teams, players: list };
@@ -184,10 +193,10 @@
       hardExtra += add;
       if (st.kd > 2.2 && st.deaths >= 12) reasons.push(`KD ${st.kd.toFixed(2)} over ${st.deaths} deaths — demon hours`);
     }
-    if (st.scorePerRound > 11) {
-      const add = clamp((st.scorePerRound - 11) / 7 * 20, 0, 20);
+    if (st.scorePerRound > 300) {
+      const add = clamp((st.scorePerRound - 300) / 60 * 20, 0, 20);
       hardExtra += add;
-      if (st.scorePerRound > 15) reasons.push(`Combat score ${round(st.scorePerRound)}/round — statline of a demon`);
+      if (st.scorePerRound > 380) reasons.push(`Combat score ${round(st.scorePerRound)}/round — statline of a demon`);
     }
     if (st.fbRate > 0.22) {
       const survive2 = clamp(1 - (st.deaths / Math.max(st.rounds, 1)) / 0.5, 0, 1);
@@ -240,7 +249,7 @@
     // is NOT proof (Riot stresses career patterns), so modest above-rank play
     // stays low and only clearly-above-rank play reads high.
     const gHS = (st.hsPct * 100 - rank.hs) / hsStep / 3;
-    const gACS = (st.scorePerRound * 13 - rank.acs) / acsStep / 3;
+    const gACS = (st.acs - rank.acs) / acsStep / 3;
     const S = 0.55 * Math.max(0, gHS) + 0.45 * Math.max(0, gACS);
     // Center at 2.5 divisions: a normal-good player (1 div up) reads ~9%, only
     // ~3+ divisions above rank crosses 50%.
@@ -263,7 +272,7 @@
     const s_fd = clamp((st.deaths / Math.max(st.rounds, 1) - 0.6) / 0.4, 0, 1) * (s_kd > 0.4 ? 1 : 0.3);
     let raw = 30 * s_afk + 30 * s_kd + 20 * s_dmg + 20 * s_fd;
 
-    const acs = st.scorePerRound * 13;
+    const acs = st.acs;
     const justBad = st.hsPct < 0.10 && st.kills <= 10 && acs < 150;
     let label = '';
     if (justBad && st.kills <= 10) { raw *= 0.18; label = 'JUST BAD'; }
