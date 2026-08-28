@@ -28,6 +28,15 @@
     for (let i = 0; i < (str || '').length; i++) h = (h * 31 + str.charCodeAt(i)) % 1000;
     return (h % 11) - 5; // -5..+5
   }
+  // Goofy "regular player" tags so a normal game gets a funny name instead of
+  // being lumped in as a smurf or a suspect. Picked deterministically from the
+  // player name so the same person always gets the same tag.
+  const REGULAR_TAGS = ['Regular Andy', 'Normie Nick', 'Average Joe', 'Plain Pam', 'Mid Mike', 'Casual Carl', 'Chill Chen', 'Standard Sam', 'Typical Tara', 'Everyday Evan'];
+  function regularTag(name) {
+    let h = 0; const s = name || 'player';
+    for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) % 1000;
+    return REGULAR_TAGS[h % REGULAR_TAGS.length];
+  }
   const logistic = (x, center, steep) => 1 / (1 + Math.exp(-(x - center) / steep));
 
   // ---- Riot agent table --------------------------------------------
@@ -202,12 +211,14 @@
     if (hardPresent) pct = clamp(round(20 + H * 0.7 + vibeJitter(st.puuid + st.name)), 0, 99);
 
     // Type: what KIND of suspicion is this?
-    // Low smurf confidence (<30%) just means a regular player in their rank — no
-    // SMURF label. Only clearly-above-rank play (>=30%) earns the smurf type.
+    // A smurf is clearly above their OWN rank (>=50% = ~3+ divisions up). Below
+    // that, a player is just a REGULAR player in their rank — give them a funny
+    // "regular" tag instead of lumping them as a smurf or a suspect.
     let type = 'fine';
     if (hardPresent || pct >= 85) type = 'cheater';
-    else if (smurf >= 0.30) type = 'smurf';
+    else if (smurf >= 0.50) type = 'smurf';
     else if (pct >= 45) type = 'sus';
+    else type = 'fine';
 
     return { pct, reasons, smurfPct: round(smurf * 100), hardPresent, type };
   }
@@ -220,19 +231,20 @@
   // from the player's own rank baseline, in rank-tier units.
   function smurfScore(st, rankTierId) {
     const rank = rankById(rankTierId || 0);
-    const myTier = Math.max(0, Math.min(8, rankIndex(rankTierId)));
     // Ladder spacing per single TIER (3 tiers = 1 rank division).
     const hsStep = (RANKS[RANKS.length - 1].hs - RANKS[0].hs) / (RANKS.length - 2);
     const acsStep = (RANKS[RANKS.length - 1].acs - RANKS[0].acs) / (RANKS.length - 2);
     // Deviation from the player's OWN rank median, expressed in RANK DIVISIONS
-    // (1 division = 3 tiers). A smurf plays like they belong ~1+ division above.
-    // One good match is NOT proof (Riot stresses career patterns) — so we only
-    // flag clearly-above-rank play and keep the ceiling modest for a single game.
+    // (1 division = 3 tiers). A smurf plays like they belong ~2.5+ divisions
+    // above their rank — i.e. basically a whole rank bracket up. One good match
+    // is NOT proof (Riot stresses career patterns), so modest above-rank play
+    // stays low and only clearly-above-rank play reads high.
     const gHS = (st.hsPct * 100 - rank.hs) / hsStep / 3;
     const gACS = (st.scorePerRound * 13 - rank.acs) / acsStep / 3;
     const S = 0.55 * Math.max(0, gHS) + 0.45 * Math.max(0, gACS);
-    // Need ~1.5 divisions above own rank to register; ~2.2 div above -> ~50% smurf.
-    const smurf = clamp(sigmoid((S - 1.5) / 0.7) * 0.85, 0, 0.95);
+    // Center at 2.5 divisions: a normal-good player (1 div up) reads ~9%, only
+    // ~3+ divisions above rank crosses 50%.
+    const smurf = clamp(sigmoid((S - 2.5) / 0.8) * 0.9, 0, 0.95);
     return clamp(smurf, 0, 1);
   }
   function rankIndex(id) {
@@ -294,7 +306,7 @@
     if (c.hardPresent || c.pct >= 85) return 'CHEATER VIBES';
     if (c.type === 'smurf') return 'SMURF VIBES';
     if (c.pct >= 45) return 'LOOKING SUS';
-    return 'PROBABLY FINE';
+    return regularTag(st.name).toUpperCase(); // e.g. REGULAR ANDY
   }
 
   function analyzeMatch(raw, myPuuid, rankTierId) {
@@ -308,6 +320,7 @@
         ...st, rankTierName: rank.name,
         cheaterPct: c.pct, throwerPct: t.pct, smurfPct: c.smurfPct,
         cheaterType: c.type, cheaterHardPresent: c.hardPresent,
+        regularTag: c.type === 'fine' ? regularTag(st.name) : '',
         cheaterReasons: c.reasons, throwerReasons: t.reasons,
         throwerLabel: t.label,
         cheaterVerdict: cheaterVerdict(c.pct),
