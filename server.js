@@ -11,6 +11,7 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const henrik = require('./henrik');
+const A = require('./analysis');
 
 const API_KEY = process.env.HENRIK_API_KEY || process.env.RIOT_API_KEY || '';
 
@@ -77,6 +78,57 @@ app.get('/api/match/:region/:id', async (req, res) => {
     const tierId = parseInt(req.query.rank, 10);
     match.rankTierId = Number.isFinite(tierId) ? tierId : null;
     res.json(match);
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+// GET /api/history/:region/:puuid  -> { rows:[...], cached:bool }  (last 10 competitive games, this player's stats)
+const historyCache = new Map(); // puuid -> { ts, rows }
+const HISTORY_TTL = 20 * 60 * 1000; // 20 min
+app.get('/api/history/:region/:puuid', async (req, res) => {
+  try {
+    const { region, puuid } = req.params;
+    const cached = historyCache.get(puuid);
+    if (cached && Date.now() - cached.ts < HISTORY_TTL) {
+      return res.json({ rows: cached.rows, cached: true });
+    }
+    const data = await henrikFetch(`/valorant/v4/by-puuid/matches/${region}/pc/${puuid}?size=10&mode=competitive`);
+    const rows = henrik.extractPlayerHistory(data, puuid);
+    historyCache.set(puuid, { ts: Date.now(), rows });
+    res.json({ rows, cached: false });
+  } catch (e) { res.status(502).json({ error: e.message }); }
+});
+
+// GET /api/trend/:region/:id  -> analyzeMatch result WITH career-trend context for all 10 players.
+// Fetches each player's last-10 history (cached per puuid) and reconciles the
+// single-match verdicts against their averages.
+app.get('/api/trend/:region/:id', async (req, res) => {
+  try {
+    const { region, id } = req.params;
+    const matchRaw = await henrikFetch(`/valorant/v4/match/${region}/${id}`);
+    const match = henrik.normalizeMatch(matchRaw);
+    const tierId = parseInt(req.query.rank, 10);
+    match.rankTierId = Number.isFinite(tierId) ? tierId : null;
+
+    const trends = {};
+    const puuids = (match.info.players || []).map((p) => p.puuid).filter(Boolean);
+    await Promise.all(puuids.map(async (puuid) => {
+      try {
+        const cached = historyCache.get(puuid);
+        let rows;
+        if (cached && Date.now() - cached.ts < HISTORY_TTL) rows = cached.rows;
+        else {
+          const data = await henrikFetch(`/valorant/v4/by-puuid/matches/${region}/pc/${puuid}?size=10&mode=competitive`);
+          rows = henrik.extractPlayerHistory(data, puuid);
+          historyCache.set(puuid, { ts: Date.now(), rows });
+        }
+        const tr = A.accumulateTrend(rows);
+        if (tr) trends[puuid] = tr;
+      } catch (_) { /* skip players we can't fetch; degrade gracefully */ }
+    }));
+
+    const result = A.analyzeMatch(matchRaw, null, match.rankTierId, trends);
+    result.trendCoverage = Object.keys(trends).length + '/' + puuids.length;
+    res.json(result);
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 

@@ -313,14 +313,61 @@
     return regularTag(st.name).toUpperCase(); // e.g. REGULAR ANDY
   }
 
-  function analyzeMatch(raw, myPuuid, rankTierId) {
+  // ---- CAREER TREND (multi-match context) --------------------------
+  // Build an average "profile" from a player's last N games so a single hot or
+  // cold game doesn't dominate the read. rows: [{kills,deaths,hsPct,acs,kd,...}]
+  function accumulateTrend(rows) {
+    const n = rows.length;
+    if (!n) return null;
+    const avg = (f) => rows.reduce((a, r) => a + (f(r) || 0), 0) / n;
+    const hs = avg((r) => r.hsPct);
+    const acs = avg((r) => r.acs);
+    const kd = avg((r) => r.kd);
+    const fbRate = avg((r) => (r.firstBloods || 0) / Math.max(r.rounds || 24, 1));
+    const kdStd = Math.sqrt(avg((r) => (r.kd - kd) ** 2)) || 0;
+    const hsStd = Math.sqrt(avg((r) => (r.hsPct - hs) ** 2)) || 0;
+    const winRate = avg((r) => (r.wins || 0)) / Math.max(rows[0].rounds || 24, 1);
+    return { n, hs, acs, kd, kdStd, hsStd, fbRate, winRate };
+  }
+
+  // Re-grade a single-match verdict using the player's career trend.
+  function reconcileWithTrend(v, trend) {
+    if (!trend || trend.n < 3) return v;
+    const out = Object.assign({}, v);
+    const ch = v.cheaterPct, hsNow = (v.hsPct || 0) * 100, hsAvg = trend.hs * 100;
+    const acsNow = v.acs || 0, acsAvg = trend.acs || 0, kdAvg = trend.kd || 0;
+    const hsZ = trend.hsStd > 0.001 ? (hsNow / 100 - trend.hs) / trend.hsStd : 0;
+    const isSpike = hsNow > hsAvg + 6 && (hsZ > 1.2 || acsNow > acsAvg * 1.25);
+    const avgSus = hsAvg > 30 && acsAvg > 260;
+    const avgSmurf = hsAvg > (rankById(v.rankTierId || 0).hs + 6) && acsAvg > 230;
+
+    if (isSpike && !avgSus) {
+      out.cheaterPct = Math.max(5, Math.round(ch * 0.55));
+      if (out.cheaterType === 'smurf') out.cheaterType = 'fine';
+      out.trendNote = `One-off spike: ${Math.round(hsNow)}% HS vs ${Math.round(hsAvg)}% avg over ${trend.n} games — probably just cracked one game`;
+    } else if (avgSus || avgSmurf) {
+      out.cheaterPct = Math.max(ch, Math.min(95, Math.round(40 + (hsAvg - 22) * 1.6 + (acsAvg > 300 ? 15 : 0))));
+      if (avgSmurf && out.cheaterType === 'fine') out.cheaterType = 'smurf';
+      out.trendNote = `Pattern: avg ${Math.round(hsAvg)}% HS / ${Math.round(acsAvg)} ACS across ${trend.n} games — not a fluke`;
+    } else {
+      out.trendNote = `Avg ${Math.round(hsAvg)}% HS / ${Math.round(acsAvg)} ACS over ${trend.n} games — normal`;
+    }
+    out.trend = { n: trend.n, hsAvg: Math.round(hsAvg), acsAvg: Math.round(acsAvg), kdAvg: Math.round(kdAvg * 100) / 100, winRate: Math.round(trend.winRate * 100) };
+    const t = { label: v.throwerLabel || '', pct: v.throwerPct };
+    const c = { pct: out.cheaterPct, type: out.cheaterType, hardPresent: v.cheaterHardPresent };
+    out.headline = headline({ name: v.name }, c, t);
+    if (out.cheaterType === 'fine' && !v.cheaterHardPresent && out.cheaterPct < 45) out.regularTag = regularTag(v.name);
+    return out;
+  }
+
+  function analyzeMatch(raw, myPuuid, rankTierId, trends) {
     const { rounds, teams, players } = parseMatch(raw);
     const tier = rankTierId != null ? rankTierId : (raw && raw.rankTierId != null ? raw.rankTierId : 0);
     const rank = rankById(tier);
     const verdicts = players.map((st) => {
       const c = cheaterScore(st, tier);
       const t = throwerScore(st, tier);
-      return {
+      let v = {
         ...st, rankTierName: rank.name,
         cheaterPct: c.pct, throwerPct: t.pct, smurfPct: c.smurfPct,
         cheaterType: c.type, cheaterHardPresent: c.hardPresent,
@@ -332,11 +379,15 @@
         headline: headline(st, c, t),
         isEnemy: myPuuid ? st.team !== (players.find((x) => x.puuid === myPuuid) || {}).team : true,
       };
+      // Apply career-trend context if we have this player's history.
+      const tr = trends && trends[st.puuid];
+      if (tr) v = reconcileWithTrend(v, tr);
+      return v;
     });
     return { rounds, teams, rank: rank.name, players: verdicts };
   }
 
-  const api = { analyzeMatch, parseMatch, cheaterScore, throwerScore, smurfScore, cheaterVerdict, throwerVerdict, agentInfo, rankById, RANKS };
+  const api = { analyzeMatch, parseMatch, cheaterScore, throwerScore, smurfScore, cheaterVerdict, throwerVerdict, agentInfo, rankById, RANKS, accumulateTrend };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AreTheyCheating = api;
 })(typeof window !== 'undefined' ? window : globalThis);

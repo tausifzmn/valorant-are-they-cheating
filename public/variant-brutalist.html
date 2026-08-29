@@ -139,6 +139,7 @@
   .reasons summary{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--mut);cursor:pointer;user-select:none}
   .reasons summary:hover{color:var(--paper)}
   .reasons ul{margin:8px 0 0;padding-left:16px;font-size:11px;line-height:1.5;color:var(--mut)}
+  .trend-note{margin-top:10px;border-top:2px dashed var(--line);padding-top:8px;font-size:11px;line-height:1.45;color:var(--accent2,#23e0c4);font-weight:600}
 
   .stamp{
     position:absolute;top:34px;right:8px;transform:rotate(-9deg);
@@ -175,6 +176,7 @@
       </select>
       <button class="search-go" id="searchBtn">Search</button>
       <button class="ghost hidden" id="backBtn">&larr; Match history</button>
+      <button class="ghost hidden" id="trendBtn">📈 Trend check</button>
     </div>
     <div class="hint">e.g. <code>TenZ#NA1</code> — name and tag are separate fields.</div>
 
@@ -194,6 +196,7 @@
   const teamsEl=$('teams'), errEl=$('err'), summaryEl=$('summary'), historyEl=$('history'), stepEl=$('step'), backBtn=$('backBtn');
   const ACCENTS={CHEATER:'#ff4655',THROWER:'#ffd400',SUS:'#ff8a3d',FINE:'#2bd96b'};
   let currentName=null, currentTag=null, currentRegion='na', currentTier=0;
+  let myPuuid='', myTeam='';
 
   const setErr=(m)=>errEl.textContent=m||'';
   const show=(el,on)=>el.classList.toggle('hidden',!on);
@@ -214,7 +217,7 @@
     stepEl.textContent='Looking up '+name+'#'+tag+'…';
     try{
       const acct=await api(`/api/account/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
-      currentName=name; currentTag=tag; currentRegion=region; currentTier=acct.tierId||0;
+      currentName=name; currentTag=tag; currentRegion=region; currentTier=acct.tierId||0; myPuuid=acct.puuid||'';
       stepEl.textContent='Found '+esc(acct.gameName)+'#'+esc(acct.tagLine)+(acct.tierName?' · '+esc(acct.tierName):'')+' — loading history…';
       const list=await api(`/api/matches/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?region=${region}`);
       renderHistory(list.matches||[]);
@@ -229,7 +232,7 @@
   }
 
   function renderHistory(matches){
-    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backBtn,false);
+    show(historyEl,true); show(teamsEl,false); show(summaryEl,false); show(backBtn,false); show(trendBtn,false);
     historyEl.innerHTML='';
     if(!matches.length){ stepEl.textContent='No recent matches found.'; return; }
     stepEl.textContent='Match history — click one to vibe-check the lobby:';
@@ -245,17 +248,33 @@
   }
 
   async function openMatch(matchId){
+    window.__curMatch=matchId;
     setErr(''); stepEl.textContent='Loading match…';
     try{
       const raw=await api(`/api/match/${currentRegion}/${encodeURIComponent(matchId)}?rank=${currentTier}`);
-      const result=window.AreTheyCheating.analyzeMatch(raw,null,currentTier);
-      show(historyEl,false); show(backBtn,true); stepEl.textContent='Post-game vibe report';
+      const result=window.AreTheyCheating.analyzeMatch(raw, myPuuid, currentTier);
+      // remember which team the searched player is on
+      const me=result.players.find(p=>p.puuid===myPuuid);
+      myTeam=(me&&(me.teamId||me.team))||'';
+      show(historyEl,false); show(backBtn,true); show(trendBtn,true); stepEl.textContent='Post-game vibe report';
       renderResult(result);
     }catch(e){ stepEl.textContent=''; setErr(mapErr(e)); }
   }
 
+  $('trendBtn').addEventListener('click', async ()=>{
+    const mid=(window.__curMatch); if(!mid) return;
+    setErr(''); show(trendBtn,false); stepEl.textContent='Pulling last 10 games for all 10 players… (this can take a few seconds)';
+    try{
+      const raw=await api(`/api/trend/${currentRegion}/${encodeURIComponent(mid)}?rank=${currentTier}`);
+      // server already baked the career-trend context into each player
+      show(backBtn,true); show(trendBtn,true);
+      renderResult(raw);
+      stepEl.textContent='Trend report — read against each player’s last 10 games ('+(raw.trendCoverage||'?')+' covered)';
+    }catch(e){ show(trendBtn,true); stepEl.textContent=''; setErr(mapErr(e)); }
+  });
+
   $('backBtn').addEventListener('click', async ()=>{
-    show(teamsEl,false); show(summaryEl,false); show(backBtn,false); stepEl.textContent='Match history:';
+    show(teamsEl,false); show(summaryEl,false); show(backBtn,false); show(trendBtn,false); stepEl.textContent='Match history:';
     try{ const list=await api(`/api/matches/${encodeURIComponent(currentName)}/${encodeURIComponent(currentTag)}?region=${currentRegion}`); renderHistory(list.matches||[]); }
     catch(e){ setErr(mapErr(e)); }
   });
@@ -270,11 +289,17 @@
       `<b>${cheaters}</b> possible cheater(s) · <b>${throwers}</b> possible thrower(s) · <b>${smurfs}</b> smurf(s)${rankCtx}. Grain of salt advised.`;
     teamsEl.innerHTML='';
 
-    // group by team
+    // group by team — searched player's team is "YOUR TEAM", the other is "ENEMY TEAM" (always red)
     const byTeam={};
     result.players.forEach(p=>{ const t=(p.teamId||p.team||'Unknown'); (byTeam[t]=byTeam[t]||[]).push(p); });
+    const teamNames={};
+    Object.keys(byTeam).forEach(team=>{
+      if(team===myTeam) teamNames[team]='YOUR TEAM';
+      else teamNames[team]='ENEMY TEAM';
+    });
     const teamColors={'Blue':'#4d9fff','Red':'#ff4655'};
-    const teamNames={'Blue':'BLUE TEAM','Red':'RED TEAM'};
+    // force enemy team red
+    Object.keys(byTeam).forEach(team=>{ if(team!==myTeam) teamColors[team]='#ff4655'; });
     Object.keys(byTeam).forEach(team=>{
       const players=byTeam[team];
       const sec=document.createElement('div'); sec.className='team';
@@ -315,6 +340,7 @@
       ${p.cheaterPct>0?`<div class="meter"><div class="mlab"><span>${p.cheaterType==='smurf'?'SMURF':'CHEATING'}</span><b>${p.cheaterPct}%</b></div><div class="bar"><i class="${p.cheaterType==='smurf'?'smurf':'cheat'}" style="width:${p.cheaterPct}%"></i></div></div>`:''}
       ${p.throwerPct>0?`<div class="meter"><div class="mlab"><span>Throwing</span><b>${p.throwerPct}%</b></div><div class="bar"><i class="throw" style="width:${p.throwerPct}%"></i></div></div>`:''}
       <p class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' — '+esc(p.throwerVerdict):''}</p>
+      ${p.trendNote?`<div class="trend-note">📈 ${esc(p.trendNote)}</div>`:''}
       ${reasons.length?`<details class="reasons"><summary>Why? (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}`;
     return c;
   }

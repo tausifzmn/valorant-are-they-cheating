@@ -80,6 +80,39 @@ function normalizeHistory(raw) {
   };
 }
 
+// Extract per-player stat rows from a v4 /by-puuid/matches history response.
+// Each history entry already contains the full stat block for that player, so
+// we pull the searched player's line (matched by puuid) out of every match.
+function extractPlayerHistory(raw, puuid) {
+  const list = (raw && raw.data) || [];
+  const rows = [];
+  for (const m of list) {
+    const players = (m && m.players) || [];
+    const me = players.find((p) => (p.puuid || '') === puuid)
+      || players.find((p) => (p.puuid || '').toLowerCase() === String(puuid).toLowerCase());
+    if (!me) continue;
+    const s = (me.stats && me.stats.stats) ? me.stats.stats : (me.stats || {});
+    const dmg = s.damage || {};
+    const hs = s.headshots || 0, bs = s.bodyshots || 0, ls = s.legshots || 0;
+    const total = hs + bs + ls;
+    const kills = s.kills || 0, deaths = s.deaths || 0, score = s.score || 0;
+    const rounds = (m.teams && m.teams[0] && (m.teams[0].rounds_played || m.teams[0].roundsPlayed)) || 0;
+    const roundsWon = (m.teams || []).reduce((a, t) => a + (t.rounds_won || t.roundsWon || 0), 0);
+    const r = rounds || roundsWon || 24;
+    rows.push({
+      kills, deaths,
+      assists: s.assists || 0,
+      hsPct: total ? hs / total : 0,
+      acs: r ? score / r : 0,
+      kd: deaths === 0 ? kills : kills / deaths,
+      score: score,
+      firstBloods: s.first_bloods || s.firstBloods || 0,
+      wins: (m.teams || []).filter((t) => t.has_won).length,
+    });
+  }
+  return rows;
+}
+
 function normalizeAccount(raw) {
   const d = (raw && raw.data) ? raw.data : (raw || {});
   return {
@@ -89,4 +122,4 @@ function normalizeAccount(raw) {
   };
 }
 
-module.exports = { normalizeMatch, normalizeHistory, normalizeAccount };
+module.exports = { normalizeMatch, normalizeHistory, normalizeAccount, extractPlayerHistory };
