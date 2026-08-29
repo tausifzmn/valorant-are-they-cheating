@@ -126,7 +126,7 @@ app.get('/api/trend/:region/:id', async (req, res) => {
       } catch (_) { /* skip players we can't fetch; degrade gracefully */ }
     }));
 
-    const result = A.analyzeMatch(matchRaw, null, match.rankTierId, trends);
+    const result = A.analyzeMatch(match, null, match.rankTierId, trends);
     result.trendCoverage = Object.keys(trends).length + '/' + puuids.length;
     res.json(result);
   } catch (e) { res.status(502).json({ error: e.message }); }
