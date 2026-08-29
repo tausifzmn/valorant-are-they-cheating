@@ -28,14 +28,9 @@
     for (let i = 0; i < (str || '').length; i++) h = (h * 31 + str.charCodeAt(i)) % 1000;
     return (h % 11) - 5; // -5..+5
   }
-  // Goofy "regular player" tags so a normal game gets a funny name instead of
-  // being lumped in as a smurf or a suspect. Picked deterministically from the
-  // player name so the same person always gets the same tag.
-  const REGULAR_TAGS = ['Regular Andy', 'Normie Nick', 'Average Joe', 'Plain Pam', 'Mid Mike', 'Casual Carl', 'Chill Chen', 'Standard Sam', 'Typical Tara', 'Everyday Evan'];
+  // Normal players get one consistent funny tag: "Average Jonas".
   function regularTag(name) {
-    let h = 0; const s = name || 'player';
-    for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) % 1000;
-    return REGULAR_TAGS[h % REGULAR_TAGS.length];
+    return 'Average Jonas';
   }
   const logistic = (x, center, steep) => 1 / (1 + Math.exp(-(x - center) / steep));
 
