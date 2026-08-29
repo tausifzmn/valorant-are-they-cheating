@@ -297,13 +297,12 @@
       if(team===myTeam) teamNames[team]='YOUR TEAM';
       else teamNames[team]='ENEMY TEAM';
     });
-    const teamColors={'Blue':'#4d9fff','Red':'#ff4655'};
-    // force enemy team red
-    Object.keys(byTeam).forEach(team=>{ if(team!==myTeam) teamColors[team]='#ff4655'; });
+    // YOUR TEAM is always blue, ENEMY TEAM is always red (regardless of which roster the data labels)
+    const TEAM_BLUE='#4d9fff', TEAM_RED='#ff4655';
     Object.keys(byTeam).forEach(team=>{
       const players=byTeam[team];
       const sec=document.createElement('div'); sec.className='team';
-      const color=teamColors[team]||'#8a8a8a';
+      const color=(team===myTeam)?TEAM_BLUE:TEAM_RED;
       sec.style.setProperty('--teamc',color);
       sec.innerHTML=`<div class="team-head">
         <span class="team-name">${teamNames[team]||esc(team)}</span>
