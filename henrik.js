@@ -96,10 +96,14 @@ function extractPlayerHistory(raw, puuid) {
     const hs = s.headshots || 0, bs = s.bodyshots || 0, ls = s.legshots || 0;
     const total = hs + bs + ls;
     const kills = s.kills || 0, deaths = s.deaths || 0, score = s.score || 0;
+    const meta = m.metadata || {};
+    // HenrikDev uses `metadata.matchid` (no underscore).
+    const matchId = meta.matchid || meta.match_id || meta.matchId || '';
     const rounds = (m.teams && m.teams[0] && (m.teams[0].rounds_played || m.teams[0].roundsPlayed)) || 0;
     const roundsWon = (m.teams || []).reduce((a, t) => a + (t.rounds_won || t.roundsWon || 0), 0);
     const r = rounds || roundsWon || 24;
     rows.push({
+      matchId,
       kills, deaths,
       assists: s.assists || 0,
       hsPct: total ? hs / total : 0,
@@ -107,7 +111,7 @@ function extractPlayerHistory(raw, puuid) {
       kd: deaths === 0 ? kills : kills / deaths,
       score: score,
       firstBloods: s.first_bloods || s.firstBloods || 0,
-      wins: (m.teams || []).filter((t) => t.has_won).length,
+      wins: (m.teams || []).filter((t) => t.has_won).length > 0 ? 1 : 0,
     });
   }
   return rows;

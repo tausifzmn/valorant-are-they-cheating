@@ -326,7 +326,8 @@
     const fbRate = avg((r) => (r.firstBloods || 0) / Math.max(r.rounds || 24, 1));
     const kdStd = Math.sqrt(avg((r) => (r.kd - kd) ** 2)) || 0;
     const hsStd = Math.sqrt(avg((r) => (r.hsPct - hs) ** 2)) || 0;
-    const winRate = avg((r) => (r.wins || 0)) / Math.max(rows[0].rounds || 24, 1);
+    // wins is 1/0 per match; winRate = average win% across N games
+    const winRate = avg((r) => r.wins || 0);
     return { n, hs, acs, kd, kdStd, hsStd, fbRate, winRate };
   }
 

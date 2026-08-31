@@ -100,7 +100,7 @@ app.get('/api/history/:region/:puuid', async (req, res) => {
 
 // GET /api/trend/:region/:id  -> analyzeMatch result WITH career-trend context for all 10 players.
 // Fetches each player's last-10 history (cached per puuid) and reconciles the
-// single-match verdicts against their averages.
+// single-match verdicts against their averages. Excludes the current match from history.
 app.get('/api/trend/:region/:id', async (req, res) => {
   try {
     const { region, id } = req.params;
@@ -121,7 +121,9 @@ app.get('/api/trend/:region/:id', async (req, res) => {
           rows = henrik.extractPlayerHistory(data, puuid);
           historyCache.set(puuid, { ts: Date.now(), rows });
         }
-        const tr = A.accumulateTrend(rows);
+        // Exclude the current match from the trend rows so it doesn't double-count
+        const filtered = rows.filter(r => r.matchId !== id);
+        const tr = A.accumulateTrend(filtered);
         if (tr) trends[puuid] = tr;
       } catch (_) { /* skip players we can't fetch; degrade gracefully */ }
     }));
