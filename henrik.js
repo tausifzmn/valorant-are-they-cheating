@@ -96,12 +96,17 @@ function extractPlayerHistory(raw, puuid) {
     const hs = s.headshots || 0, bs = s.bodyshots || 0, ls = s.legshots || 0;
     const total = hs + bs + ls;
     const kills = s.kills || 0, deaths = s.deaths || 0, score = s.score || 0;
+    const meTeamId = me.team_id || me.teamId || '';
     const meta = m.metadata || {};
-    // HenrikDev uses `metadata.matchid` (no underscore).
-    const matchId = meta.matchid || meta.match_id || meta.matchId || '';
-    const rounds = (m.teams && m.teams[0] && (m.teams[0].rounds_played || m.teams[0].roundsPlayed)) || 0;
-    const roundsWon = (m.teams || []).reduce((a, t) => a + (t.rounds_won || t.roundsWon || 0), 0);
+    // HenrikDev v4 by-puuid history nests matchId + rounds under .metadata
+    // and may use either flat or nested rounds shape.
+    const matchId = meta.matchid || meta.match_id || meta.matchId || (m.metadata && (m.metadata.id || m.metadata.match_id)) || '';
+    const rounds = (m.teams && m.teams[0] && (m.teams[0].rounds_played || (m.teams[0].rounds && (m.teams[0].rounds.played || 0)))) || 0;
+    const roundsWon = (m.teams || []).reduce((a, t) => a + (t.rounds_won || (t.rounds && t.rounds.won) || 0), 0);
     const r = rounds || roundsWon || 24;
+    // Win = this player is on the team that has t.won === true
+    const wonTeam = (m.teams || []).find((t) => t.won === true);
+    const won = wonTeam ? (wonTeam.team_id || wonTeam.teamId) === meTeamId : false;
     rows.push({
       matchId,
       kills, deaths,
@@ -111,7 +116,7 @@ function extractPlayerHistory(raw, puuid) {
       kd: deaths === 0 ? kills : kills / deaths,
       score: score,
       firstBloods: s.first_bloods || s.firstBloods || 0,
-      wins: (m.teams || []).filter((t) => t.has_won).length > 0 ? 1 : 0,
+      wins: won ? 1 : 0,
     });
   }
   return rows;
