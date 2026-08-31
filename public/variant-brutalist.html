@@ -140,6 +140,11 @@
   .reasons summary:hover{color:var(--paper)}
   .reasons ul{margin:8px 0 0;padding-left:16px;font-size:11px;line-height:1.5;color:var(--mut)}
   .trend-note{margin-top:10px;border-top:2px dashed var(--line);padding-top:8px;font-size:11px;line-height:1.45;color:var(--accent2,#23e0c4);font-weight:600}
+  .conf-badge{display:inline-block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:1.5px solid var(--paper);margin-left:6px;font-weight:700;vertical-align:middle}
+  .conf-badge.high{background:var(--paper);color:var(--ink)}
+  .conf-badge.med{background:transparent;color:var(--paper)}
+  .conf-badge.low{background:transparent;color:var(--mut);border-color:var(--mut)}
+  .sigma-line{font-size:10px;color:var(--mut);margin:4px 0 0;letter-spacing:.02em}
 
   .stamp{
     position:absolute;top:34px;right:8px;transform:rotate(-9deg);
@@ -336,8 +341,18 @@
         <div><span>HS</span><b>${Math.round(p.hsPct*100)}%</b></div>
         <div><span>ACS</span><b>${acs}</b></div>
       </div>
-      ${p.cheaterPct>0?`<div class="meter"><div class="mlab"><span>${p.cheaterType==='smurf'?'SMURF':'CHEATING'}</span><b>${p.cheaterPct}%</b></div><div class="bar"><i class="${p.cheaterType==='smurf'?'smurf':'cheat'}" style="width:${p.cheaterPct}%"></i></div></div>`:''}
+      ${p.cheaterPct>0?`<div class="meter"><div class="mlab"><span>${p.cheaterType==='smurf'?'SMURF':p.cheaterType==='cheater'?'CHEATING':p.cheaterType==='sus'?'LOOKING SUS':'SUSPICION'}</span><b>${p.cheaterPct}%</b></div><div class="bar"><i class="${p.cheaterType==='smurf'?'smurf':p.cheaterType==='cheater'?'cheat':'cheat'}" style="width:${p.cheaterPct}%"></i></div></div>`:''}
       ${p.throwerPct>0?`<div class="meter"><div class="mlab"><span>Throwing</span><b>${p.throwerPct}%</b></div><div class="bar"><i class="throw" style="width:${p.throwerPct}%"></i></div></div>`:''}
+      ${p.signals?(()=>{
+        const conf = p.confidence||0;
+        const cl = conf>=0.7?'high':conf>=0.45?'med':'low';
+        const s = p.signals;
+        const sigmaBits = [];
+        if (s.hs) sigmaBits.push('HS '+(Math.round(s.hs.sigma*10)/10)+'σ');
+        if (s.acs) sigmaBits.push('ACS '+(Math.round(s.acs.sigma*10)/10)+'σ');
+        if (s.kd && Math.abs(s.kd.sigma)>=1.0) sigmaBits.push('KD '+(Math.round(s.kd.sigma*10)/10)+'σ');
+        return `<div class="sigma-line"><span class="conf-badge ${cl}">${cl==='high'?'HIGH CONF':cl==='med'?'MED CONF':'LOW CONF'}</span> ${sigmaBits.join(' · ')||'all metrics in range'}</div>`;
+      })():''}
       <p class="verdict">"${esc(p.cheaterVerdict)}"${p.throwerPct>=45?' — '+esc(p.throwerVerdict):''}</p>
       ${p.trendNote?`<div class="trend-note">📈 ${esc(p.trendNote)}</div>`:''}
       ${reasons.length?`<details class="reasons"><summary>Why? (${reasons.length})</summary><ul>${reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}`;

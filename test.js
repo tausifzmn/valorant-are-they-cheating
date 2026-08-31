@@ -1,111 +1,109 @@
 /*
- * Engine unit tests — research-backed sanity checks.
- * Run: node test.js
+ * test.js — engine unit tests
+ * ---------------------------
+ * Covers: baselines, signals, verdict, edge cases.
  */
-const A = require('./analysis.js');
+'use strict';
+
+const { rankFor, sigma, agentHsMod } = require('./baselines');
+const sigs = require('./signals');
+const { analyzePlayer, classify } = require('./verdict');
+const A = require('./analysis');
 
 let pass = 0, fail = 0;
-function check(name, cond, extra) {
-  if (cond) { pass++; console.log('  ✓ ' + name); }
-  else { fail++; console.log('  ✗ ' + name + (extra ? '  -> ' + extra : '')); }
+function ok(label, cond, extra) {
+  if (cond) { pass++; console.log('  \u2713', label); }
+  else { fail++; console.log('  \u2717', label, extra ? '\n     '+extra : ''); }
 }
-function mk(stats, agent, rounds = 24, rank = 12) {
-  return {
-    info: {
-      roundsPlayed: rounds,
-      teams: [{ roundsPlayed: rounds }],
-      players: [{ puuid: 'p_' + (stats.name || 'x'), gameName: stats.name || 'Test', tagLine: 'TST', characterId: agent, teamId: 'Blue', stats }],
-    },
-    rankTierId: rank,
-  };
-}
-const AG = {
-  raze: 'a3bfb853-43b2-7238-a4f1-ad90e9e46bcc', jett: 'e370fa57-4757-3604-3648-499e1f642d3f',
-  chamber: '462180ff-8be3-8a3c-e330-f2cdcee6e5a3', vyse: '4a79e213-4997-29ca-9d4d-5943c25dfcf4',
-  brim: '9f0d8ba9-4140-b941-57d3-a7ad57c6b417',
-};
+function section(name) { console.log('\n=== ' + name + ' ==='); }
 
-console.log('\n=== CHEATER: HS% band + kills-gate ===');
-{
-  const r = A.analyzeMatch(mk({ kills: 24, deaths: 14, headshots: 270, bodyshots: 405, legshots: 0, score: 420, damageDealt: 3500, damageReceived: 3000, firstBloods: 6, assists: 5 }, AG.jett, 24, 27), null, 27); // Radiant
-  check('Radiant-Jett 40% HS reads LOW-MODERATE (<45, 40% is only slightly above Radiant norm)', r.players[0].cheaterPct < 45, 'cheat=' + r.players[0].cheaterPct);
-}
-{
-  const r = A.analyzeMatch(mk({ kills: 22, deaths: 10, headshots: 406, bodyshots: 294, legshots: 0, score: 480, damageDealt: 4200, damageReceived: 2500, firstBloods: 8, assists: 4 }, AG.raze, 24, 12), null, 12); // Gold
-  check('Raze 58% HS at Gold reads HIGH (cheat>=45)', r.players[0].cheaterPct >= 45, 'cheat=' + r.players[0].cheaterPct);
-}
-{
-  // 60% HS is the rank-INVARIANT hard tell -> reads high regardless of low kills (cheating is cheating)
-  const r = A.analyzeMatch(mk({ kills: 5, deaths: 8, headshots: 18, bodyshots: 12, legshots: 0, score: 90, damageDealt: 800, damageReceived: 1200, firstBloods: 1, assists: 1 }, AG.chamber, 24, 9), null, 9); // Silver
-  check('60% HS is a hard tell -> cheater HIGH even on 5 kills', r.players[0].cheaterPct >= 45, 'cheat=' + r.players[0].cheaterPct);
-}
-{
-  // kills-gate only softens the SOFT band: 50% HS on 5 kills < 50% HS on 25 kills (both below 60 hard cap)
-  const low = A.analyzeMatch(mk({ kills: 5, deaths: 8, headshots: 75, bodyshots: 75, legshots: 0, score: 130, damageDealt: 900, damageReceived: 1200, firstBloods: 1, assists: 1 }, AG.chamber, 24, 9), null, 9).players[0].cheaterPct;
-  const high = A.analyzeMatch(mk({ kills: 25, deaths: 12, headshots: 375, bodyshots: 375, legshots: 0, score: 650, damageDealt: 4500, damageReceived: 2400, firstBloods: 9, assists: 4 }, AG.chamber, 24, 9), null, 9).players[0].cheaterPct;
-  check('kills-gate: 50% HS on 25 kills > 50% HS on 5 kills', high > low, 'low=' + low + ' high=' + high);
-}
-{
-  const r = A.analyzeMatch(mk({ kills: 38, deaths: 2, headshots: 200, bodyshots: 300, legshots: 0, score: 600, damageDealt: 5000, damageReceived: 600, firstBloods: 10, assists: 3 }, AG.vyse, 12), null, 12);
-  check('Flawless on 12-round game does NOT read 99', r.players[0].cheaterPct < 99, 'cheat=' + r.players[0].cheaterPct);
-}
+// ---- BASELINES ----
+section('BASELINES');
+ok('rankFor returns numeric baseline for tier 15 (Plat)', rankFor(15).hs === 25.2);
+ok('rankFor interpolates between Plat and Diamond for tier 16', rankFor(16).hs > 25.2 && rankFor(16).hs < 26.9);
+ok('rankFor returns Unranked for tier 0', rankFor(0).name === 'Unranked');
+ok('sigma(25.2, 25.2, 6.5) = 0', Math.abs(sigma(25.2, 25.2, 6.5)) < 0.001);
+ok('sigma(38.2, 25.2, 6.5) \u2248 2', Math.abs(sigma(38.2, 25.2, 6.5) - 2) < 0.01);
+ok('Jett has negative HS mod (-0.6) \u2014 high HS less sus', agentHsMod('Jett') === -0.6);
+ok('Raze has positive HS mod (+0.4) \u2014 explosive kit', agentHsMod('Raze') === 0.4);
 
-console.log('\n=== RANK-RELATIVE HS + SMURF (as a TYPE, not a discount) ===');
-// Gold player with above-rank stats -> bar is legitimately HIGH, but classified SMURF (not cheater)
-{
-  const r = A.analyzeMatch(mk({ kills: 22, deaths: 12, headshots: 240, bodyshots: 360, legshots: 0, score: 300, damageDealt: 3200, damageReceived: 2800, firstBloods: 5, assists: 4 }, AG.jett, 24, 12), null, 12); // Gold, ~40% HS
-  const p = r.players[0];
-  check('Gold 40%HS player: smurf high (>=50)', p.smurfPct >= 50, 'smurf=' + p.smurfPct);
-  check('Gold 40%HS player: type SMURF (>=30 conf)', p.cheaterType === 'smurf', 'type=' + p.cheaterType);
-  check('Gold 40%HS player: cheater bar is HONEST (>=50, NOT suppressed by smurf)', p.cheaterPct >= 50, 'cheat=' + p.cheaterPct);
-  check('Gold 40%HS player: NO hard tells -> type SMURF not CHEATER', p.cheaterType === 'smurf', 'type=' + p.cheaterType);
-  check('Gold 40%HS player: not hard_present', !p.cheaterHardPresent, 'hard=' + p.cheaterHardPresent);
-}
-// SAME stats at Radiant -> smurf low (normal for rank), cheater low, type fine/sus
-{
-  const r = A.analyzeMatch(mk({ kills: 22, deaths: 12, headshots: 240, bodyshots: 360, legshots: 0, score: 300, damageDealt: 3200, damageReceived: 2800, firstBloods: 5, assists: 4 }, AG.jett, 24, 27), null, 27);
-  const p = r.players[0];
-  check('Radiant same stats: smurf LOW (<50, normal-ish for rank)', p.smurfPct < 50, 'smurf=' + p.smurfPct);
-  check('Radiant same stats: cheater low (<45, 40%HS is normal at Radiant)', p.cheaterPct < 45, 'cheat=' + p.cheaterPct);
-}
-// Hard tell overrides smurf: 63% HS at Gold -> cheater high + type CHEATER
-{
-  const r = A.analyzeMatch(mk({ kills: 24, deaths: 0, headshots: 300, bodyshots: 180, legshots: 0, score: 500, damageDealt: 6000, damageReceived: 400, firstBloods: 18, assists: 2 }, AG.raze, 24, 12), null, 12);
-  const p = r.players[0];
-  check('63%HS 0-death at Gold: cheater HIGH (hard tell wins over smurf)', p.cheaterPct >= 70, 'cheat=' + p.cheaterPct);
-  check('63%HS: type is CHEATER (hard tell, not smurf)', p.cheaterType === 'cheater', 'type=' + p.cheaterType);
-}
+// ---- HS SIGNAL ----
+section('HEADSHOT SIGNAL');
+const plat = rankFor(15);
+const hsRes = sigs.hsSignal({ headshots: 200, bodyshots: 210, legshots: 0, kills: 28, deaths: 19, rounds: 24, agent: 'Chamber' }, plat);
+ok('49% HS at Plat Chamber: sigma > 3 (high)', hsRes.sigma > 3);
+ok('HS signal includes reasoning', hsRes.reasons.length > 0);
+const hsLowKills = sigs.hsSignal({ headshots: 50, bodyshots: 50, legshots: 0, kills: 5, deaths: 8, rounds: 24, agent: 'Gekko' }, plat);
+ok('5 kills @ 50% HS \u2014 lower confidence', hsLowKills.confidence < sigs.hsSignal({ headshots: 200, bodyshots: 200, legshots: 0, kills: 28, deaths: 19, rounds: 24, agent: 'Chamber' }, plat).confidence);
 
+// ---- ACS SIGNAL ----
+section('ACS SIGNAL');
+const acsHigh = sigs.acsSignal({ score: 410 * 24, kills: 28, deaths: 19, rounds: 24 }, plat);
+ok('ACS 410 at Plat — sigma > 3 (very high)', acsHigh.sigma > 3);
 
-// Low smurf confidence (<30%) => regular player, NOT labeled smurf
-{
-  const r = A.analyzeMatch(mk({ kills: 20, deaths: 18, headshots: 60, bodyshots: 240, legshots: 0, score: 260, damageDealt: 2400, damageReceived: 2400, firstBloods: 4, assists: 4 }, AG.jett, 24, 12), null, 12);
-  const p = r.players[0];
-  check('Slightly-above-rank Gold: low smurf (<30) -> NOT labeled smurf', p.cheaterType !== 'smurf', 'type=' + p.cheaterType + ' smurf=' + p.smurfPct);
-}
-console.log('\n=== THROWER vs JUST-BAD + RANK FACTOR ===');
-{
-  const r = A.analyzeMatch(mk({ kills: 8, deaths: 22, headshots: 12, bodyshots: 160, legshots: 0, score: 90, damageDealt: 1100, damageReceived: 4000, firstBloods: 2, assists: 1 }, AG.chamber, 24, 3), null, 3); // Iron
-  const p = r.players[0];
-  check('Inept low-HS low-kill Iron player = JUST BAD', p.throwerLabel === 'JUST BAD', 'label=' + p.throwerLabel);
-  check('JUST BAD thrower% is low (<22)', p.throwerPct < 22, 'throw=' + p.throwerPct);
-}
-{
-  const r = A.analyzeMatch(mk({ kills: 3, deaths: 22, headshots: 40, bodyshots: 120, legshots: 0, score: 95, damageDealt: 900, damageReceived: 4200, firstBloods: 1, assists: 0 }, AG.brim, 24, 27), null, 27); // Radiant weak
-  const p = r.players[0];
-  check('Identical weak stats at Radiant = higher thrower% than Iron', p.throwerPct > 10, 'throw=' + p.throwerPct);
-}
-{
-  const r = A.analyzeMatch(mk({ kills: 9, deaths: 18, headshots: 55, bodyshots: 200, legshots: 0, score: 140, damageDealt: 2200, damageReceived: 3000, firstBloods: 3, assists: 2 }, AG.omen || 'b44415ee-4adb-4dc9-991e-2c83c7e4e5a3', 24, 12), null, 12);
-  check('Passive weak Gold player is WEAK not THROWER', r.players[0].throwerLabel !== 'THROWER', 'label=' + r.players[0].throwerLabel);
-}
+// ---- THROWER SIGNAL ----
+section('THROWER SIGNALS');
+const afkP = { kills: 0, deaths: 5, assists: 0, score: 30, damageDealt: 80, damageReceived: 600, firstDeaths: 8, firstBloods: 0, rounds: 20 };
+ok('AFK player flagged as thrower by afkSignal', sigs.afkSignal(afkP).flag === 'thrower');
+const feedP = { kills: 4, deaths: 18, assists: 2, score: 800, damageDealt: 1200, damageReceived: 3800, firstDeaths: 12, firstBloods: 0, rounds: 22 };
+ok('Heavy feeder: dmgBalance flag = thrower', sigs.dmgBalanceSignal(feedP).flag === 'thrower');
+ok('Heavy feeder: firstDeath flag = thrower', sigs.firstDeathSignal(feedP).flag === 'thrower');
 
-console.log('\n=== Deterministic jitter ===');
-{
-  const a = A.analyzeMatch(mk({ kills: 20, deaths: 5, headshots: 120, bodyshots: 180, legshots: 0, score: 300, damageDealt: 2500, damageReceived: 1500, firstBloods: 6, assists: 4 }, AG.jett, 24, 12), null, 12);
-  const b = A.analyzeMatch(mk({ kills: 20, deaths: 5, headshots: 120, bodyshots: 180, legshots: 0, score: 300, damageDealt: 2500, damageReceived: 1500, firstBloods: 6, assists: 4 }, AG.jett, 24, 12), null, 12);
-  check('Same input -> same pct (seeded jitter)', a.players[0].cheaterPct === b.players[0].cheaterPct);
-}
+// ---- TREND-DROP ----
+section('TREND-DROP SIGNAL');
+const trend10 = { n: 10, hsAvg: 0.22, hsSigma: 0.05, acsAvg: 230, acsSigma: 50, kdAvg: 1.1, kdSigma: 0.3 };
+const normalPlayer = { score: 230 * 24, acs: 230, kills: 18, deaths: 16, rounds: 24, hsPct: 0.22 };
+const dropPlayer = { score: 80 * 24, acs: 80, kills: 4, deaths: 18, rounds: 24, hsPct: 0.10 };
+ok('Player matching trend: drop sigma ~ 0', sigs.trendDropSignal(normalPlayer, trend10).sigma < 0.5);
+ok('Player way below trend: drop sigma > 2', sigs.trendDropSignal(dropPlayer, trend10).sigma > 2);
 
-console.log(`\n${fail === 0 ? 'ALL CHECKS PASSED ✅' : fail + ' CHECK(S) FAILED ❌'}  (${pass} passed, ${fail} failed)\n`);
+// ---- VERDICT ----
+section('VERDICT CLASSIFICATION');
+const proPlayer = { kills: 28, deaths: 19, assists: 3, score: 410 * 24, acs: 410, headshots: 200, bodyshots: 210, legshots: 0, damageDealt: 5200, damageReceived: 3800, firstBloods: 6, firstDeaths: 3, rounds: 24, agent: 'Chamber', agentRole: 'sentinel', rankTierId: 15 };
+const proVerdict = analyzePlayer(proPlayer, 15);
+ok('49% HS / 410 ACS / Chamber Plat: type=cheater', proVerdict.type === 'cheater', 'got '+proVerdict.type);
+ok('Pro verdict includes sigma reasoning', proVerdict.cheaterReasons.some((r) => r.includes('\u03c3')));
+
+const avgPlayer = { kills: 15, deaths: 14, assists: 5, score: 220 * 24, headshots: 80, bodyshots: 340, legshots: 20, damageDealt: 3500, damageReceived: 3500, firstBloods: 2, firstDeaths: 5, rounds: 24, agent: 'Brimstone', agentRole: 'controller', rankTierId: 15 };
+const avgVerdict = analyzePlayer(avgPlayer, 15);
+ok('Avg Plat player: type=fine', avgVerdict.type === 'fine', 'got '+avgVerdict.type+' pct='+avgVerdict.pct);
+
+const smurfGold = { kills: 25, deaths: 12, assists: 4, score: 330 * 24, headshots: 120, bodyshots: 280, legshots: 10, damageDealt: 4500, damageReceived: 2800, firstBloods: 5, firstDeaths: 2, rounds: 22, agent: 'Jett', agentRole: 'duelist', rankTierId: 12 };
+const smurfVerdict = analyzePlayer(smurfGold, 12);
+ok('Cracked Jett at Gold: type=smurf or cheater', ['smurf', 'cheater', 'sus'].includes(smurfVerdict.type), 'got '+smurfVerdict.type+' pct='+smurfVerdict.pct);
+
+const smallSample = { kills: 3, deaths: 8, assists: 1, score: 30 * 24, headshots: 30, bodyshots: 20, legshots: 0, damageDealt: 350, damageReceived: 800, firstBloods: 0, firstDeaths: 3, rounds: 22, agent: 'Gekko', agentRole: 'initiator', rankTierId: 15 };
+const ssVerdict = analyzePlayer(smallSample, 15);
+ok('3 kills @ 45% HS \u2014 low confidence reading', ssVerdict.confidence < 0.5, 'got confidence='+ssVerdict.confidence);
+
+// ---- TREND RECONCILIATION ----
+section('TREND RECONCILIATION');
+// Normal averages but this game spiked: downgrade
+const oneOffSpike = { kills: 25, deaths: 12, headshots: 150, bodyshots: 150, legshots: 0, score: 380 * 24, acs: 380, damageDealt: 4800, damageReceived: 3000, firstBloods: 4, firstDeaths: 2, rounds: 24, agent: 'Chamber', agentRole: 'sentinel', rankTierId: 15 };
+const consistentTrend = { n: 10, hsAvg: 0.22, hsSigma: 0.04, acsAvg: 230, acsSigma: 40, kdAvg: 1.1, kdSigma: 0.3 };
+const spikeVerdict = analyzePlayer(oneOffSpike, 15, consistentTrend);
+ok('One-off spike w/ normal trend: NOT cheater (downgraded)', spikeVerdict.type !== 'cheater', 'got '+spikeVerdict.type+' pct='+spikeVerdict.pct);
+
+// Pattern: averages are sus + this game sus = sustained smurf
+const sustained = { kills: 25, deaths: 14, headshots: 120, bodyshots: 200, legshots: 10, score: 320 * 24, acs: 320, damageDealt: 4200, damageReceived: 3000, firstBloods: 4, firstDeaths: 2, rounds: 24, agent: 'Chamber', agentRole: 'sentinel', rankTierId: 15 };
+const susTrend = { n: 10, hsAvg: 0.34, hsSigma: 0.04, acsAvg: 310, acsSigma: 30, kdAvg: 1.4, kdSigma: 0.2 };
+const susVerdict = analyzePlayer(sustained, 15, susTrend);
+ok('Sustained above-rank pattern: type=smurf', susVerdict.type === 'smurf' || susVerdict.type === 'cheater', 'got '+susVerdict.type+' pct='+susVerdict.pct);
+
+// ---- THROWER ----
+section('THROWER VERDICT');
+const badThrower = { kills: 2, deaths: 14, assists: 0, score: 90, damageDealt: 180, damageReceived: 1900, firstBloods: 0, firstDeaths: 9, rounds: 20, agent: 'Jett', agentRole: 'duelist', rankTierId: 15 };
+const throwVerdict = analyzePlayer(badThrower, 15, { n: 10, hsAvg: 0.20, hsSigma: 0.05, acsAvg: 200, acsSigma: 40, kdAvg: 1.0, kdSigma: 0.3 });
+ok('AFK/feeding player with trend drop: throwerPct >= 60', throwVerdict.throwerPct >= 60, 'got '+throwVerdict.throwerPct);
+
+const badButConsistent = { kills: 8, deaths: 16, assists: 3, score: 130 * 22, acs: 130, damageDealt: 1500, damageReceived: 2800, firstBloods: 1, firstDeaths: 7, rounds: 22, agent: 'Sage', agentRole: 'sentinel', rankTierId: 15 };
+const consistentBad = analyzePlayer(badButConsistent, 15, { n: 10, hsAvg: 0.14, hsSigma: 0.03, acsAvg: 130, acsSigma: 20, kdAvg: 0.5, kdSigma: 0.1 });
+ok('Consistently bad player w/ trend: throwerPct low (NOT a thrower)', consistentBad.throwerPct < 40, 'got '+consistentBad.throwerPct);
+
+// ---- BACKWARD COMPAT: old analysis.js still loads ----
+section('BACKWARD COMPAT');
+ok('analysis.js exports analyzeMatch', typeof A.analyzeMatch === 'function');
+ok('analysis.js exports accumulateTrend', typeof A.accumulateTrend === 'function');
+
+console.log('\n' + (fail === 0 ? 'ALL CHECKS PASSED \u2705' : 'FAILED \u274c') + '  (' + pass + ' passed, ' + fail + ' failed)');
 process.exit(fail === 0 ? 0 : 1);

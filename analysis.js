@@ -85,13 +85,10 @@
     { id: 27, name: 'Radiant',   hs: 31, kd: 1.20, acs: 320 },
   ];
   function rankById(id) {
-    const r = RANKS.find((x) => x.id === id);
-    if (r) return r;
-    // interpolate to nearest known tier band
-    if (id < 3) return RANKS[0];
-    const lower = [...RANKS].filter((x) => x.id <= id).pop() || RANKS[1];
-    const upper = [...RANKS].filter((x) => x.id >= id).find((x) => x.id !== id) || lower;
-    return { id, name: 'Unknown', hs: (lower.hs + upper.hs) / 2, kd: (lower.kd + upper.kd) / 2, acs: (lower.acs + upper.acs) / 2 };
+    // Use the rich baselines module so rank names interpolate cleanly
+    // (e.g. tier 16 between Plat and Diamond reads "Platinum/Diamond").
+    const r = require('./baselines').rankFor(id);
+    return { id: r.id, name: r.name, hs: r.hs, kd: r.kd, acs: r.acs };
   }
   // Rank factor for the THROWER score: low rank = "learning" (down-weight),
   // high rank = "shouldn't be there" (up-weight sabotage).
@@ -361,31 +358,95 @@
     return out;
   }
 
+  // ---- NEW: Sigma-based verdict engine ----------------------------
+  // Modular signals + composite verdict. Each player's verdict is built from
+  // pure statistical signals compared to their rank+agent baseline, with trend
+  // reconciliation that spots one-off spikes and pattern-based smurfs/throwers.
+  const { analyzePlayer: _analyzePlayer } = require('./verdict');
+
+  // Adapt our parsed player shape into what verdict.js expects.
+  function toVerdictInput(st, rankId, trend) {
+    return {
+      kills: st.kills, deaths: st.deaths, assists: st.assists,
+      score: st.score, acs: st.acs, rounds: st.rounds,
+      headshots: st.hs, bodyshots: st.bs, legshots: st.ls,
+      damageDealt: st.dmgDealt, damageReceived: st.dmgRecv,
+      firstBloods: st.fb, firstDeaths: st.fd || 0,
+      hsPct: st.hsPct, agent: st.agent, agentRole: st.agentRole,
+      rankTierId: rankId,
+    };
+  }
+
+  // Adapt accumulateTrend output (no sigmas) to what verdict.js wants.
+  function toTrendInput(tr) {
+    if (!tr) return null;
+    // Estimate sigmas from the trend's std devs if present, else fall back
+    // to a reasonable default (the per-rank baseline sigma).
+    return {
+      n: tr.n,
+      hsAvg: tr.hs,
+      hsSigma: tr.hsStd || 0.04,
+      acsAvg: tr.acs,
+      acsSigma: tr.acsStd || 40,
+      kdAvg: tr.kd,
+      kdSigma: tr.kdStd || 0.3,
+      winRate: tr.winRate,
+    };
+  }
+
   function analyzeMatch(raw, myPuuid, rankTierId, trends) {
     const { rounds, teams, players } = parseMatch(raw);
     const tier = rankTierId != null ? rankTierId : (raw && raw.rankTierId != null ? raw.rankTierId : 0);
     const rank = rankById(tier);
+    const myTeam = myPuuid ? (players.find((x) => x.puuid === myPuuid) || {}).team : '';
     const verdicts = players.map((st) => {
-      const c = cheaterScore(st, tier);
-      const t = throwerScore(st, tier);
-      let v = {
-        ...st, rankTierName: rank.name,
-        cheaterPct: c.pct, throwerPct: t.pct, smurfPct: c.smurfPct,
-        cheaterType: c.type, cheaterHardPresent: c.hardPresent,
-        regularTag: c.type === 'fine' ? regularTag(st.name) : '',
-        cheaterReasons: c.reasons, throwerReasons: t.reasons,
-        throwerLabel: t.label,
-        cheaterVerdict: cheaterVerdict(c.pct),
-        throwerVerdict: throwerVerdict(t.pct, t.label),
-        headline: headline(st, c, t),
-        isEnemy: myPuuid ? st.team !== (players.find((x) => x.puuid === myPuuid) || {}).team : true,
-      };
-      // Apply career-trend context if we have this player's history.
+      // ---- Old engine still runs for headline display / backward compat ----
+      const cOld = cheaterScore(st, tier);
+      const tOld = throwerScore(st, tier);
+      // ---- New sigma-based engine is the source of truth for type/pct ----
       const tr = trends && trends[st.puuid];
-      if (tr) v = reconcileWithTrend(v, tr);
-      return v;
+      const v = _analyzePlayer(toVerdictInput(st, tier, tr), tier, toTrendInput(tr));
+      // ---- Assemble the response shape the UI/server already expects ----
+      let out = {
+        ...st, rankTierName: rank.name, rankTierId: tier,
+        cheaterPct: v.pct, throwerPct: v.throwerPct,
+        cheaterType: v.type, cheaterHardPresent: v.signals ? (v.signals.hs.sigma >= 3 || v.signals.acs.sigma >= 3) : false,
+        confidence: v.confidence,
+        cheaterReasons: v.cheaterReasons, throwerReasons: v.throwerReasons,
+        regularTag: v.type === 'fine' ? regularTag(st.name) : '',
+        cheaterVerdict: cheaterVerdict(v.pct),
+        throwerVerdict: throwerVerdict(v.throwerPct, tOld.label),
+        headline: v.headline,
+        isEnemy: myPuuid ? st.team !== myTeam : true,
+        // expose raw signals for UI (confidence badge + σ explanations)
+        signals: v.signals ? {
+          hs: { value: v.signals.hs.value, sigma: v.signals.hs.sigma, rawSigma: v.signals.hs.rawSigma, agentMod: v.signals.hs.agentMod },
+          acs: { value: v.signals.acs.value, sigma: v.signals.acs.sigma },
+          kd: { value: v.signals.kd.value, sigma: v.signals.kd.sigma },
+          dmg: { value: v.signals.dmg.value, sigma: v.signals.dmg.sigma },
+          firstDeath: { value: v.signals.firstDeath.value, sigma: v.signals.firstDeath.sigma },
+          dmgBalance: { value: v.signals.dmgBalance.value, sigma: v.signals.dmgBalance.sigma },
+          trendDrop: { value: v.signals.trendDrop.value, sigma: v.signals.trendDrop.sigma, available: v.signals.trendDrop.available },
+          trendSpike: { value: v.signals.trendSpike.value, sigma: v.signals.trendSpike.sigma, available: v.signals.trendSpike.available },
+        } : null,
+      };
+      // ---- Trend note (matches old shape so UI keeps working) ----
+      if (tr) {
+        out.trend = {
+          n: tr.n,
+          hsAvg: Math.round(tr.hs * 100),
+          acsAvg: Math.round(tr.acs),
+          kdAvg: Math.round(tr.kd * 100) / 100,
+          winRate: Math.round(tr.winRate * 100),
+        };
+        // Use the new verdict's reasons for a clean trend-aware note
+        const susReason = v.cheaterReasons.find((r) => r.includes('σ above their 10-game') || r.includes('Pattern:'));
+        if (susReason) out.trendNote = susReason;
+        else out.trendNote = `Avg ${out.trend.hsAvg}% HS / ${out.trend.acsAvg} ACS over ${tr.n} games — normal`;
+      }
+      return out;
     });
-    return { rounds, teams, rank: rank.name, players: verdicts };
+    return { rounds, teams, rank: rank.name, rankTierId: tier, players: verdicts };
   }
 
   const api = { analyzeMatch, parseMatch, cheaterScore, throwerScore, smurfScore, cheaterVerdict, throwerVerdict, agentInfo, rankById, RANKS, accumulateTrend };
